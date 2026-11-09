@@ -1,0 +1,51 @@
+import {test,after,before} from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {mkdtempSync,rmSync} from 'node:fs';import os from 'node:os';import path from 'node:path';
+const dir=mkdtempSync(path.join(os.tmpdir(),'esquina-test-'));let proc;const base='http://127.0.0.1:3198';
+before(async()=>{proc=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3198',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{proc.stdout.once('data',resolve);proc.once('error',reject);proc.once('exit',c=>reject(new Error('Server exited '+c)))});});
+after(()=>{proc?.kill();rmSync(dir,{recursive:true,force:true})});
+async function api(route,method='GET',body,cookie){const r=await fetch(base+'/api/'+route,{method,headers:{'Content-Type':'application/json',...(cookie?{cookie}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]}}
+let admin,consumer;
+test('authentication, permissions and inventory accounting',async()=>{
+ assert.equal((await api('state')).status,401);
+ admin=(await api('login','POST',{email:'admin@laesquina.demo',password:'Esquina2026!'})).cookie;
+ consumer=(await api('login','POST',{email:'maria@laesquina.demo',password:'Consumo2026!'})).cookie;
+ assert.ok(admin);assert.ok(consumer);
+ assert.equal((await api('analytics?from=2026-11-01&to=2026-11-30')).status,401);
+ assert.equal((await api('analytics?from=2026-11-01&to=2026-11-30','GET',null,consumer)).status,403);
+ assert.equal((await api('analytics?from=2026-02-30&to=2026-03-01','GET',null,admin)).status,400);
+ assert.equal((await api('analytics','GET',null,admin)).status,400);
+ const report=await api('analytics?from=2026-01-01&to=2026-12-31','GET',null,admin);
+ assert.equal(report.status,200);assert.equal(report.data.summary.sales,0);
+
+ assert.equal((await api('categories','POST',{name:'Prohibida',type:'Comida'},consumer)).status,403);
+ const initial=(await api('state','GET',null,admin)).data;const p=initial.products[0];
+ const bad=await api('checkout','POST',{items:[{id:p.id,quantity:p.stock+1}],user_id:2},admin);assert.equal(bad.status,400);
+ assert.equal((await api('state','GET',null,admin)).data.products[0].stock,p.stock);
+ const bill=await api('checkout','POST',{items:[{id:p.id,quantity:2}],user_id:1},consumer);assert.equal(bill.status,201);assert.equal(bill.data.total,p.price*2);
+ const state=(await api('state','GET',null,consumer)).data;assert.equal(state.products[0].stock,p.stock-2);assert.equal(state.invoices[0].user_id,2);assert.equal(state.invoices[0].lines[0].quantity,2);
+ assert.equal((await api('invoices/'+bill.data.id+'/pay','POST',{},consumer)).status,403);
+ assert.equal((await api('invoices/'+bill.data.id+'/pay','POST',{},admin)).status,200);
+ assert.equal((await api('state','GET',null,consumer)).data.invoices[0].status,'Pagada');
+ const reportAfter=(await api('analytics?from=2000-01-01&to=2000-01-31','GET',null,admin)).data;
+ assert.equal(reportAfter.summary.sales,0);
+ const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Bogota'});
+ assert.equal((await api('monthly-accounts?month=2026-11','GET',null,consumer)).status,403);
+ assert.equal((await api('monthly-accounts.xlsx?month=2026-11','GET',null,consumer)).status,403);
+ assert.equal((await api('analytics.xlsx?from=2026-11-01&to=2026-11-30','GET',null,consumer)).status,403);
+ const month=today.slice(0,7);
+ const monthly=(await api('monthly-accounts?month='+month,'GET',null,admin)).data;
+ assert.equal(monthly.totals.total,p.price*2);assert.equal(monthly.people.find(u=>u.id===2).orders,1);
+ const excel=await fetch(base+'/api/monthly-accounts.xlsx?month='+month,{headers:{cookie:admin}});
+ assert.equal(excel.status,200);assert.match(excel.headers.get('content-type'),/spreadsheetml/);
+ assert.match(excel.headers.get('content-disposition'),/attachment/);
+ assert.equal(Buffer.from(await excel.arrayBuffer()).subarray(0,2).toString(),'PK');
+ const todayReport=(await api('analytics?from='+today+'&to='+today,'GET',null,admin)).data;
+ assert.equal(todayReport.summary.sales,p.price*2);assert.equal(todayReport.summary.settled,p.price*2);
+
+ assert.equal((await api('movements','POST',{product_id:p.id,quantity:10,kind:'Entrada',note:'Reposición'},admin)).status,201);
+ assert.equal((await api('state','GET',null,admin)).data.products[0].stock,p.stock+8);
+ assert.equal((await api('categories','POST',{name:'Panadería',type:'Comida'},admin)).status,201);
+ assert.equal((await api('users','POST',{name:'Prueba',email:'prueba@test.co',password:'UnaClaveSegura!',role:'consumer'},admin)).status,201);
+ const other=(await api('login','POST',{email:'prueba@test.co',password:'UnaClaveSegura!'})).cookie;assert.equal((await api('state','GET',null,other)).data.invoices.length,0);
+ assert.equal((await api('checkout','POST',{items:[{id:p.id,quantity:1},{id:p.id,quantity:1}]},consumer)).status,400);
+ assert.equal((await api('logout','POST',{},consumer)).status,200);assert.equal((await api('state','GET',null,consumer)).status,401);
+});
