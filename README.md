@@ -91,4 +91,21 @@ Verificación visual en Chrome compartido: panel de análisis, formulario mensua
 
 Se consultaron UI UX Pro Max, Impeccable y Ponytail. Se usa `write-excel-file` (y su dependencia `fflate`) para escribir archivos `.xlsx` estándar. Interfaz operativa en español, fondos cálidos, verde bosque, iconos SVG, estados textuales, foco visible, etiquetas de formulario y navegación adaptable. Ver `DESIGN.md`.
 
-La aplicación funciona localmente en este entorno. No está publicada: los scripts de Sites no están instalados y este servidor Node/SQLite necesita alojamiento compatible con Node y disco persistente. No se creó un sitio vacío ni se modificó ninguna política de acceso. La cuenta de cobro no es una factura electrónica fiscal. No integra pagos electrónicos.
+La aplicación está preparada para SQLite local y PostgreSQL en Vercel. No está publicada todavía. No se creó un sitio vacío ni se modificó ninguna política de acceso. La cuenta de cobro no es una factura electrónica fiscal. No integra pagos electrónicos.
+
+## Publicación en Vercel
+
+La aplicación mantiene SQLite en Windows y usa PostgreSQL persistente cuando se configura `DATABASE_URL`. `vercel.json` sirve el frontend desde `public` y enruta las API a `api/index.mjs`. El servidor no abre un puerto dentro de Vercel.
+
+1. Crea un repositorio vacío y sube el código, incluidos `api/`, `database.mjs`, `vercel.json` y `package-lock.json`. No subas la carpeta `data`.
+2. Importa el repositorio en Vercel, usando Node 24.x, y conecta una base PostgreSQL dedicada (por ejemplo Neon) con la cadena de conexión TLS del proveedor.
+3. Configura como secretos de producción: `DATABASE_URL`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres). Nunca los publiques ni los pegues en el código. No compartas la base de producción con previews; cada entorno debe tener su propia base.
+4. Despliega y verifica `/api/health`, el acceso, la creación de categorías/productos y las descargas Excel.
+
+En Vercel no se crean las cuentas de demostración ni se escribe SQLite en `/tmp`. La base empieza con un administrador y sin productos; el administrador crea el inventario y los consumidores. Los datos existentes de tu Windows no se transfieren automáticamente. Si falta la base persistente o las credenciales iniciales, la API devuelve un error de configuración en lugar de iniciar una tienda con datos efímeros. La contraseña inicial se usa solo cuando la base no tiene usuarios; después se cambia desde Mi cuenta.
+
+Los consumos bloquean las filas de los productos dentro de la transacción PostgreSQL. Las transacciones locales se serializan para que dos solicitudes no vendan la misma última unidad. Las sesiones se guardan en la misma base.
+
+Prueba PostgreSQL contra una base **desechable dedicada** con `TEST_DATABASE_URL=... node --test test/api.test.mjs`. Las pruebas normales ignoran `DATABASE_URL` y crean una SQLite temporal; no uses datos reales en `TEST_DATABASE_URL`.
+
+El código local tiene commits preparados. La creación del repositorio está pendiente del permiso de GitHub; el despliegue requiere el acceso al equipo de Vercel y una conexión PostgreSQL de producción.

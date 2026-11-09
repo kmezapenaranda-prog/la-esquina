@@ -34,10 +34,10 @@ test('Bogotá date bounds, inclusive last day and equal-length preceding period'
   assert.equal(reportRange('2024-02-29','2024-02-29').days,1);
 });
 
-test('sales use historical invoice prices and complete period, not current prices or inventory exits', () => {
+test('sales use historical invoice prices and complete period, not current prices or inventory exits', async () => {
   const db=fixture();
   try {
-    const r=salesReport(db,'2026-11-01','2026-11-30');
+    const r=await salesReport(db,'2026-11-01','2026-11-30');
     assert.equal(r.summary.sales,7000);
     assert.equal(r.summary.units,3);
     assert.equal(r.summary.orders,2);
@@ -56,20 +56,20 @@ test('sales use historical invoice prices and complete period, not current price
     assert.equal(r.trend[1].sales,0);
     assert.equal(r.stock[0].id,1);
     assert.deepEqual(r.noSales.map(p=>p.id),[3]);
-    const empty=salesReport(db,'2026-08-01','2026-08-31');
+    const empty=await salesReport(db,'2026-08-01','2026-08-31');
     assert.equal(empty.summary.sales,0);
     assert.equal(empty.summary.average,0);
     assert.equal(empty.comparison.percent,null);
     assert.equal(empty.products.length,0);
     assert.equal(empty.trend.length,31);
-    const monthly=salesReport(db,'2026-10-01','2026-12-31');
+    const monthly=await salesReport(db,'2026-10-01','2026-12-31');
     assert.equal(monthly.granularity,'month');
     assert.deepEqual(monthly.trend.map(t=>[t.period,t.sales]),[['2026-10',1000],['2026-11',7000],['2026-12',9000]]);
     // Reports must not inherit the 200-row limit of the movements screen.
     const invoice=db.prepare('INSERT INTO invoices VALUES(?,?,?,?,?)');
     const line=db.prepare('INSERT INTO invoice_lines(invoice_id,product_id,name,quantity,price) VALUES(?,?,?,?,?)');
     for(let id=10;id<215;id++){invoice.run(id,2,'2026-11-10T12:00:00.000Z',10,'Pendiente');line.run(id,1,'Papas',1,10)}
-    const large=salesReport(db,'2026-11-01','2026-11-30');
+    const large=await salesReport(db,'2026-11-01','2026-11-30');
     assert.equal(large.summary.orders,207);
     assert.equal(large.summary.sales,9050);
     assert.equal(large.summary.units,208);
@@ -77,10 +77,10 @@ test('sales use historical invoice prices and complete period, not current price
 });
 
 
-test('monthly accounts group each person, preserve zero-consumption people and isolate months', () => {
+test('monthly accounts group each person, preserve zero-consumption people and isolate months', async () => {
   const db=fixture();
   try {
-    const report=monthlyAccounts(db,'2026-11');
+    const report=await monthlyAccounts(db,'2026-11');
     assert.deepEqual(report.totals,{orders:2,total:7000,pending:5000,settled:2000});
     assert.equal(report.people.length,3);
     assert.equal(report.people.find(p=>p.id===2).pending,5000);
@@ -88,13 +88,13 @@ test('monthly accounts group each person, preserve zero-consumption people and i
     assert.equal(report.people.find(p=>p.id===4).total,0);
     assert.deepEqual(report.invoices.map(i=>i.id),[2,3]);
     assert.equal(report.lines.reduce((s,l)=>s+l.price*l.quantity,0),7000);
-    const ana=monthlyAccounts(db,'2026-11','2');
+    const ana=await monthlyAccounts(db,'2026-11','2');
     assert.equal(ana.people.length,1);assert.equal(ana.invoices.length,1);
     assert.ok(ana.lines.every(l=>l.user_id===2));assert.equal(ana.totals.total,5000);
-    assert.equal(monthlyAccounts(db,'2026-10').totals.total,1000);
-    assert.equal(monthlyAccounts(db,'2026-12').totals.total,9000);
-    assert.equal(monthlyAccounts(db,'2024-02').range.to,'2024-02-29');
-    for(const month of ['2026-13','2026-1','no',null])assert.throws(()=>monthlyAccounts(db,month),e=>e.status===400);
-    assert.throws(()=>monthlyAccounts(db,'2026-11','999'),e=>e.status===400);
+    assert.equal((await monthlyAccounts(db,'2026-10')).totals.total,1000);
+    assert.equal((await monthlyAccounts(db,'2026-12')).totals.total,9000);
+    assert.equal((await monthlyAccounts(db,'2024-02')).range.to,'2024-02-29');
+    for(const month of ['2026-13','2026-1','no',null])await assert.rejects(()=>monthlyAccounts(db,month),e=>e.status===400);
+    await assert.rejects(()=>monthlyAccounts(db,'2026-11','999'),e=>e.status===400);
   } finally {db.close()}
 });

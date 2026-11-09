@@ -1,6 +1,6 @@
 import {test,after,before} from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {mkdtempSync,rmSync} from 'node:fs';import os from 'node:os';import path from 'node:path';
 const dir=mkdtempSync(path.join(os.tmpdir(),'esquina-test-'));let proc;const base='http://127.0.0.1:3198';
-before(async()=>{proc=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:'3198',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{proc.stdout.once('data',resolve);proc.once('error',reject);proc.once('exit',c=>reject(new Error('Server exited '+c)))});});
+before(async()=>{proc=spawn(process.execPath,['server.mjs'],{env:{...process.env,DATABASE_URL:process.env.TEST_DATABASE_URL||'',VERCEL:'',PORT:'3198',DATA_DIR:dir},stdio:['ignore','pipe','pipe']});await new Promise((resolve,reject)=>{proc.stdout.once('data',resolve);proc.once('error',reject);proc.once('exit',c=>reject(new Error('Server exited '+c)))});});
 after(()=>{proc?.kill();rmSync(dir,{recursive:true,force:true})});
 async function api(route,method='GET',body,cookie){const r=await fetch(base+'/api/'+route,{method,headers:{'Content-Type':'application/json',...(cookie?{cookie}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]}}
 let admin,consumer;
@@ -47,5 +47,12 @@ test('authentication, permissions and inventory accounting',async()=>{
  assert.equal((await api('users','POST',{name:'Prueba',email:'prueba@test.co',password:'UnaClaveSegura!',role:'consumer'},admin)).status,201);
  const other=(await api('login','POST',{email:'prueba@test.co',password:'UnaClaveSegura!'})).cookie;assert.equal((await api('state','GET',null,other)).data.invoices.length,0);
  assert.equal((await api('checkout','POST',{items:[{id:p.id,quantity:1},{id:p.id,quantity:1}]},consumer)).status,400);
+ const scarce=await api('products','POST',{name:'Última unidad',category_id:1,price:1000,stock:1,minimum:1},admin);
+ assert.equal(scarce.status,201);
+ const competing=await Promise.all([1,2].map(()=>api('checkout','POST',{items:[{id:scarce.data.id,quantity:1}],user_id:2},admin)));
+ assert.deepEqual(competing.map(r=>r.status).sort(),[201,400]);
+ const afterCompetition=(await api('state','GET',null,admin)).data;
+ assert.equal(afterCompetition.products.find(p=>p.id===scarce.data.id).stock,0);
+ assert.equal(afterCompetition.invoices.filter(i=>i.lines.some(l=>l.product_id===scarce.data.id)).length,1);
  assert.equal((await api('logout','POST',{},consumer)).status,200);assert.equal((await api('state','GET',null,consumer)).status,401);
 });

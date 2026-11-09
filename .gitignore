@@ -7,3 +7,5 @@ runtime/
 *.sqlite-wal
 *.sqlite-shm
 *.zip
+!.env.example
+.vercel/
