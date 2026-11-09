@@ -7,7 +7,7 @@ Aplicación de tienda con inventario, entradas y salidas, cuentas de cobro y acc
 Requiere Node.js 22.13 o posterior con `node:sqlite` (probada con Node 24). Instala las dependencias con `npm ci`. La descarga portable de Windows ya las incluye.
 
 ```bash
-cd tienda
+cd la-esquina
 npm ci
 npm start
 ```
@@ -108,4 +108,4 @@ Los consumos bloquean las filas de los productos dentro de la transacción Postg
 
 Prueba PostgreSQL contra una base **desechable dedicada** con `TEST_DATABASE_URL=... node --test test/api.test.mjs`. Las pruebas normales ignoran `DATABASE_URL` y crean una SQLite temporal; no uses datos reales en `TEST_DATABASE_URL`.
 
-El código local tiene commits preparados. La creación del repositorio está pendiente del permiso de GitHub; el despliegue requiere el acceso al equipo de Vercel y una conexión PostgreSQL de producción.
+Repositorio: https://github.com/kmezapenaranda-prog/la-esquina. La publicación en Vercel requiere una conexión PostgreSQL de producción y las credenciales iniciales del administrador configuradas como secretos.

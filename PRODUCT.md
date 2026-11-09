@@ -16,4 +16,4 @@ Sin identidad suministrada. Nombre provisional La Esquina; diseño delegado por 
 Los productos y usuarios iniciales son datos de demostración, identificados en la interfaz.
 
 ## Análisis solicitado
-El usuario solicita análisis por períodos, ventas mensuales, compatibilidad con Excel, informes mensuales de cuentas por persona y adaptación a celular, antes de publicar el código en GitHub. Exportación XLSX y CSV, solo para administradores. Informes mensuales a demanda seleccionando mes y persona. No se ha solicitado un envío automático ni publicación en GitHub todavía.
+El usuario solicita análisis por períodos, ventas mensuales, compatibilidad con Excel, informes mensuales de cuentas por persona y adaptación a celular, antes de publicar el código en GitHub. Exportación XLSX y CSV, solo para administradores. Informes mensuales a demanda seleccionando mes y persona. El usuario solicitó publicación en GitHub y Vercel. No se ha solicitado un envío automático de informes.
