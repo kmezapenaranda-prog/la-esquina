@@ -43,3 +43,7 @@ Revisión visual de acceso, panel y catálogo en Chrome compartido (ventana de a
 Se conserva la identidad visual. La sección Análisis usa rangos inclusivos de Colombia, comparación con igual cantidad de días y una tendencia con alternativa tabular. Excel y CSV exportan el período aplicado. El informe mensual tiene su propio selector de mes/persona y resúmenes rotulados para distinguirlo del análisis general. Los saldos son estados actuales, sin presentarlos como flujo de caja.
 
 En móvil, la navegación principal muestra Resumen, Análisis, Inventario, Cuentas y Más. Las tablas cambian a fichas etiquetadas, conservando datos y acciones. El menú Más contiene todas las secciones. Formularios y controles de fecha mantienen un mínimo táctil de 44 px. Se revisaron panel, formularios, fichas y menú a ancho equivalente a 400 px CSS.
+
+## Registro por QR
+
+El panel de Consumidores muestra el QR bajo demanda en una sección de la misma página, con enlace copiable y PNG descargable. No bloquea el resto del panel con un diálogo. El formulario público conserva el estilo del acceso, identifica expresamente la cuenta como consumidor y no obliga a transcribir una invitación cuando se abre desde el QR. Incluye confirmación de contraseña, errores y estado de envío, y se apila en móvil. Se revisó visualmente en escritorio y en ancho equivalente a 400 px CSS.

@@ -17,3 +17,6 @@ Los productos y usuarios iniciales son datos de demostración, identificados en 
 
 ## Análisis solicitado
 El usuario solicita análisis por períodos, ventas mensuales, compatibilidad con Excel, informes mensuales de cuentas por persona y adaptación a celular, antes de publicar el código en GitHub. Exportación XLSX y CSV, solo para administradores. Informes mensuales a demanda seleccionando mes y persona. El usuario solicitó publicación en GitHub y Vercel. No se ha solicitado un envío automático de informes.
+
+## Autorregistro confirmado
+El usuario solicita que las personas se autorregistren escaneando un QR. El administrador comparte el mismo QR o enlace de invitación; cada persona crea una cuenta de consumidor con nombre, correo y contraseña. Los administradores se siguen creando desde el panel de administración, sin autorregistro administrativo. El enlace debe mantenerse válido entre despliegues.

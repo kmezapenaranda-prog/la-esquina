@@ -117,3 +117,16 @@ Producción: https://la-esquina.vercel.app. Se comprobaron por HTTP el estado 20
 La contraseña inicial del administrador está guardada en las variables cifradas del proyecto Vercel (`ADMIN_PASSWORD`); no está en este repositorio. Cámbiala desde Mi cuenta después del primer acceso. La producción comienza vacía y no contiene los datos de Windows.
 
 El despliegue actual se creó desde la rama `main`. El proyecto todavía no tiene conexión Git automática: un push por sí solo no publica nuevos cambios; se debe realizar otro despliegue desde Vercel o configurar esa conexión en sus ajustes.
+
+## Autorregistro con QR
+
+1. Entra como administrador y abre **Consumidores → QR de registro** (en celular, Consumidores está en Más).
+2. Descarga el QR en PNG para imprimirlo o comparte el enlace con el botón **Copiar enlace**. No se usan generadores externos de QR.
+3. Cada persona escanea el QR y escribe nombre, correo y contraseña (mínimo 10 caracteres, con confirmación). Al terminar, entra directamente al catálogo.
+4. La cuenta aparece automáticamente en Consumidores y en los informes mensuales.
+
+El mismo QR sirve para todas las personas. Su invitación se guarda en la base de datos y se conserva al desplegar nuevas versiones. El enlace incluye la invitación en el fragmento (`#registro?...`), que el navegador no envía al servidor al cargar la página. `PUBLIC_APP_URL` define el dominio estable del QR; en producción está configurado como `https://la-esquina.vercel.app`. El correo y la contraseña se envían únicamente a la API de La Esquina por HTTPS.
+
+El servidor fija el rol de autorregistro a `consumer`, aunque se intente enviar otro rol. Solo un administrador puede obtener el QR mediante la API. El QR se puede compartir para permitir registros, pero no inicia sesión en cuentas existentes ni da permisos administrativos. Los correos son únicos y las contraseñas se guardan con scrypt. No se envía correo de verificación. Los intentos con invitaciones inválidas tienen un límite por proceso y dirección IP; los registros correctos no consumen ese límite para permitir grupos en la misma red.
+
+La nueva tabla `settings` guarda la invitación y se crea de forma aditiva, sin borrar usuarios, inventario ni cuentas. Las pruebas verifican decodificación del PNG, registro y entrada automática, rol forzado de consumidor, aislamiento de cuentas, contraseñas no coincidentes, invitaciones inválidas y registros simultáneos con el mismo correo.
