@@ -91,7 +91,7 @@ Verificación visual en Chrome compartido: panel de análisis, formulario mensua
 
 Se consultaron UI UX Pro Max, Impeccable y Ponytail. Se usa `write-excel-file` (y su dependencia `fflate`) para escribir archivos `.xlsx` estándar. Interfaz operativa en español, fondos cálidos, verde bosque, iconos SVG, estados textuales, foco visible, etiquetas de formulario y navegación adaptable. Ver `DESIGN.md`.
 
-La aplicación está preparada para SQLite local y PostgreSQL en Vercel. No está publicada todavía. No se creó un sitio vacío ni se modificó ninguna política de acceso. La cuenta de cobro no es una factura electrónica fiscal. No integra pagos electrónicos.
+Aplicación publicada: https://la-esquina.vercel.app. Usa SQLite local y PostgreSQL persistente en Vercel. La cuenta de cobro no es una factura electrónica fiscal. No integra pagos electrónicos.
 
 ## Publicación en Vercel
 
@@ -109,3 +109,11 @@ Los consumos bloquean las filas de los productos dentro de la transacción Postg
 Prueba PostgreSQL contra una base **desechable dedicada** con `TEST_DATABASE_URL=... node --test test/api.test.mjs`. Las pruebas normales ignoran `DATABASE_URL` y crean una SQLite temporal; no uses datos reales en `TEST_DATABASE_URL`.
 
 Repositorio: https://github.com/kmezapenaranda-prog/la-esquina. La publicación en Vercel requiere una conexión PostgreSQL de producción y las credenciales iniciales del administrador configuradas como secretos.
+
+## Despliegue verificado
+
+Producción: https://la-esquina.vercel.app. Se comprobaron por HTTP el estado 200, el acceso del administrador, la lectura de la base persistente, el análisis por fechas, las cuentas mensuales y un Excel válido, sin registrar consumos ni movimientos de prueba.
+
+La contraseña inicial del administrador está guardada en las variables cifradas del proyecto Vercel (`ADMIN_PASSWORD`); no está en este repositorio. Cámbiala desde Mi cuenta después del primer acceso. La producción comienza vacía y no contiene los datos de Windows.
+
+El despliegue actual se creó desde la rama `main`. El proyecto todavía no tiene conexión Git automática: un push por sí solo no publica nuevos cambios; se debe realizar otro despliegue desde Vercel o configurar esa conexión en sus ajustes.
