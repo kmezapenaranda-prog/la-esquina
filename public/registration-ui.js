@@ -7,11 +7,11 @@ function registrationInvitation() {
 function registrationPanel() {
   return `<section class="panel registration-panel" id="registration-panel" hidden><div class="panel-heading"><div><h2>Invita a tu tienda</h2><small>Comparte el QR o el enlace. Cada persona crea su propia cuenta de consumidor.</small></div></div><div class="panel-body" id="registration-content"></div></section>`;
 }
-async function showRegistrationQR(button) {
+async function showRegistrationQR(trigger) {
   const panel=$('#registration-panel');
   if(!panel)return;
   panel.hidden=false;
-  button.disabled=true;
+  trigger.disabled=true;
   $('#registration-content').innerHTML='<p class="muted" role="status">Preparando el QR de tu tienda…</p>';
   panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
   try {
@@ -20,7 +20,7 @@ async function showRegistrationQR(button) {
     $('#registration-content').innerHTML=`<div class="registration-share"><img class="registration-qr" src="${esc(data.qr)}" width="240" height="240" alt="QR para crear una cuenta de consumidor en La Esquina"><div><h3>Escanea, regístrate y listo</h3><p class="muted">Nombre, correo y una contraseña personal. La cuenta queda lista al instante y aparece en tu lista de consumidores.</p><label class="field">Enlace de registro<input id="registration-link" type="text" value="${esc(data.url)}" readonly></label><div class="actions">${button('Copiar enlace','copy-registration','receipt','secondary')}<a class="btn" href="${esc(data.qr)}" download="la-esquina-qr-registro.png">${icon('down')} Descargar QR</a></div><p class="report-note">Puedes imprimir el QR o enviarlo por WhatsApp. El mismo QR sirve para todas las personas y solo crea cuentas de consumidor.</p></div></div>`;
   } catch(error) {
     if($('#registration-content'))$('#registration-content').innerHTML=`<p class="form-error" role="alert">${esc(error.message)} Vuelve a pulsar QR de registro.</p>`;
-  } finally {button.disabled=false;}
+  } finally {trigger.disabled=false;}
 }
 async function copyRegistrationLink(button) {
   const field=$('#registration-link');
