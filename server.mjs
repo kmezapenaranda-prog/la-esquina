@@ -1,6 +1,7 @@
 import http from 'node:http';
+import {ensureInventoryImportSchema,previewInventoryImport,commitInventoryImport} from './inventory-import.mjs';
 import QRCode from 'qrcode';
-import { salesWorkbook, monthlyWorkbook } from './excel.mjs';
+import { salesWorkbook, monthlyWorkbook, inventoryTemplate } from './excel.mjs';
 import { salesReport, monthlyAccounts } from './analytics.mjs';
 import { openDatabase } from './database.mjs';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
@@ -15,6 +16,7 @@ const passwordCheck=(p,h)=>{const [s,k]=h.split(':');return timingSafeEqual(scry
 await db.transaction(async()=>{
  if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock(21472431)');
  await db.exec(db.dialect==='postgres'?schema.replaceAll('INTEGER PRIMARY KEY','SERIAL PRIMARY KEY').replace('expires INTEGER','expires BIGINT'):schema);
+await ensureInventoryImportSchema(db);
 if(!(await db.prepare('SELECT value FROM settings WHERE key=?').get('registration_invitation'))){await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('registration_invitation',randomBytes(32).toString('hex'));}
 if(!(await db.prepare('SELECT id FROM users LIMIT 1').get())){
  if(process.env.VERCEL){
@@ -45,8 +47,8 @@ async function handler(req,res){
  res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
  if(route==='/api/config'&&req.method==='GET')return json(res,200,{demo:!process.env.VERCEL});
  if(route==='/api/health'&&req.method==='GET')return json(res,200,{app:'la-esquina',ok:true});
- if(!route.startsWith('/api/')){const name=route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
- let body={};if(!['GET','HEAD'].includes(req.method)){if(req.headers.origin&&req.headers.origin!==`${req.headers['x-forwarded-proto']||'http'}://${req.headers.host}`)fail('Origen no permitido.',403);if(req.body&&typeof req.body==='object')body=req.body;else{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>100000)fail('Solicitud demasiado grande.',413);chunks.push(c)}try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}')}catch{fail('Solicitud inválida.')}}}
+ if(!route.startsWith('/api/')){const name=route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/inventory-import-ui.js'?'inventory-import-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
+ let body={};if(!['GET','HEAD'].includes(req.method)){if(req.headers.origin&&req.headers.origin!==`${req.headers['x-forwarded-proto']||'http'}://${req.headers.host}`)fail('Origen no permitido.',403);if(req.body&&typeof req.body==='object')body=req.body;else{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>(route==='/api/inventory-import/preview'?3000000:100000))fail('Solicitud demasiado grande.',413);chunks.push(c)}try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}')}catch{fail('Solicitud inválida.')}}}
  if(!body||typeof body!=='object'||Array.isArray(body))fail('Solicitud inválida.');
  const token=Object.fromEntries((req.headers.cookie||'').split(';').filter(x=>x.includes('=')).map(x=>x.trim().split('='))).session;
  let user=token?(await db.prepare('SELECT u.* FROM users u JOIN sessions s ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(token,Date.now())):null;
@@ -81,12 +83,13 @@ async function handler(req,res){
  if(!user)fail('Inicia sesión para continuar.',401);
  if(route==='/api/logout'&&req.method==='POST'){(await db.prepare('DELETE FROM sessions WHERE token=?').run(token));return json(res,200,{ok:true},{'Set-Cookie':cookie('')})}
  if(route==='/api/state'&&req.method==='GET'){
- const products=(await db.prepare('SELECT p.*,c.name category,c.type FROM products p JOIN categories c ON c.id=p.category_id WHERE p.active=1 ORDER BY p.id').all());
+ const products=(await db.prepare('SELECT * FROM products WHERE active=1 ORDER BY id').all());
+ for(const product of products){delete product.category_id;if(user.role!=='admin')delete product.unit_cost;}
  const invoices=(await db.prepare(`SELECT i.*,u.name consumer FROM invoices i JOIN users u ON i.user_id=u.id ${user.role==='admin'?'':'WHERE i.user_id=?'} ORDER BY i.id DESC`).all(...(user.role==='admin'?[]:[user.id])));
  for(const i of invoices)i.lines=(await db.prepare('SELECT * FROM invoice_lines WHERE invoice_id=?').all(i.id));
  const movements=(await db.prepare(`SELECT m.*,p.name product,p.icon,u.name actor,c.name consumer FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.actor_id LEFT JOIN users c ON c.id=m.user_id ${user.role==='admin'?'':'WHERE m.user_id=?'} ORDER BY m.id DESC LIMIT 200`).all(...(user.role==='admin'?[]:[user.id])));
  const users=user.role==='admin'?(await db.prepare('SELECT id,name,email,role FROM users ORDER BY id').all()):[userView(user)];
- return json(res,200,{user:userView(user),products,categories:(await db.prepare('SELECT * FROM categories ORDER BY name').all()),invoices,movements,users})}
+ return json(res,200,{user:userView(user),products,invoices,movements,users})}
  if(route==='/api/checkout'&&req.method==='POST'){
  if(!Array.isArray(body.items)||!body.items.length||body.items.length>100)fail('Agrega productos a la cuenta.');
  const uid=user.role==='admin'?int(body.user_id,1):user.id;if(!(await db.prepare('SELECT id FROM users WHERE id=?').get(uid)))fail('Selecciona un consumidor.');
@@ -110,14 +113,30 @@ async function handler(req,res){
    res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':`attachment; filename="la-esquina-${monthly?'cuentas':'ventas'}-${suffix}.xlsx"`,'Cache-Control':'no-store','Content-Length':content.length});return res.end(content);
  }
  if(route==='/api/analytics'&&req.method==='GET')return json(res,200,await salesReport(db,url.searchParams.get('from'),url.searchParams.get('to')));
- if(route==='/api/categories'&&req.method==='POST'){const name=str(body.name,60);if(!['Comida','Bebida'].includes(body.type))fail('Selecciona comida o bebida.');(await db.prepare('INSERT INTO categories(name,type) VALUES(?,?)').run(name,body.type));return json(res,201,{ok:true})}
- if(route==='/api/products'&&req.method==='POST'){const name=str(body.name),cat=int(body.category_id,1),price=int(body.price,1),stock=int(body.stock),minimum=int(body.minimum);if(!(await db.prepare('SELECT id FROM categories WHERE id=?').get(cat)))fail('La categoría no existe.');const id=await transaction(async()=>{const id=Number((await db.prepare('INSERT INTO products(name,category_id,price,stock,minimum,icon) VALUES(?,?,?,?,?,?)').run(name,cat,price,stock,minimum,str(body.icon||'🛍️',10))).lastInsertRowid);(await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,'Entrada',stock,'Inventario inicial',new Date().toISOString()));return id});return json(res,201,{id})}
- if(/^\/api\/products\/\d+$/.test(route)&&req.method==='PATCH'){const id=+route.split('/').pop();const cat=int(body.category_id,1);if(!(await db.prepare('SELECT id FROM categories WHERE id=?').get(cat)))fail('La categoría no existe.');const r=(await db.prepare('UPDATE products SET name=?,category_id=?,price=?,minimum=?,icon=? WHERE id=? AND active=1').run(str(body.name),cat,int(body.price,1),int(body.minimum),str(body.icon||'🛍️',10),id));if(!r.changes)fail('Producto no encontrado.',404);return json(res,200,{ok:true})}
+ if(route==='/api/inventory-template.xlsx'&&req.method==='GET'){
+   const content=await inventoryTemplate();res.writeHead(200,{'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','Content-Disposition':'attachment; filename="plantilla-inventario.xlsx"','Cache-Control':'no-store'});return res.end(content);
+ }
+ if(route==='/api/inventory-import/preview'&&req.method==='POST')return json(res,200,await previewInventoryImport(db,body,user.id));
+ if(route==='/api/inventory-import/commit'&&req.method==='POST')return json(res,200,await commitInventoryImport(db,body.token,user.id));
+ if(route==='/api/products'&&req.method==='POST'){
+  const name=str(body.name),price=int(body.price,1),stock=int(body.stock),minimum=int(body.minimum),cost=body.unit_cost==null||body.unit_cost===''?null:int(body.unit_cost);
+  const id=await transaction(async()=>{
+   if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock(21472432)');
+   const id=Number((await db.prepare('INSERT INTO products(name,price,stock,minimum,icon,unit_cost) VALUES(?,?,?,?,?,?)').run(name,price,stock,minimum,str(body.icon||'🛍️',10),cost)).lastInsertRowid);
+   await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,'Entrada',stock,'Inventario inicial',new Date().toISOString());return id;
+  });return json(res,201,{id});
+ }
+ if(/^\/api\/products\/\d+$/.test(route)&&req.method==='PATCH'){
+  const id=+route.split('/').pop(),existing=await db.prepare('SELECT unit_cost FROM products WHERE id=? AND active=1').get(id);
+  if(!existing)fail('Producto no encontrado.',404);
+  const cost=body.unit_cost===undefined?existing.unit_cost:body.unit_cost==null||body.unit_cost===''?null:int(body.unit_cost);
+  await db.prepare('UPDATE products SET name=?,price=?,minimum=?,icon=?,unit_cost=? WHERE id=?').run(str(body.name),int(body.price,1),int(body.minimum),str(body.icon||'🛍️',10),cost,id);return json(res,200,{ok:true});
+ }
  if(route==='/api/movements'&&req.method==='POST'){const id=int(body.product_id,1),q=int(body.quantity,1),kind=body.kind;if(!['Entrada','Salida'].includes(kind))fail('Tipo inválido.');const note=str(body.note,200);await transaction(async()=>{const p=(await db.prepare('SELECT * FROM products WHERE id=? AND active=1'+(db.dialect==='postgres'?' FOR UPDATE':'')).get(id));if(!p)fail('Producto no encontrado.');if(kind==='Salida'&&p.stock<q)fail('Existencias insuficientes.');int(p.stock+(kind==='Entrada'?q:-q));(await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(kind==='Entrada'?q:-q,id));(await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,kind,q,note,new Date().toISOString()))});return json(res,201,{ok:true})}
  if(/^\/api\/invoices\/\d+\/pay$/.test(route)&&req.method==='POST'){const r=(await db.prepare("UPDATE invoices SET status='Pagada' WHERE id=? AND status='Pendiente'").run(+route.split('/')[3]));if(!r.changes)fail('La cuenta ya está pagada o no existe.');return json(res,200,{ok:true})}
  if(route==='/api/users'&&req.method==='POST'){const name=str(body.name),email=str(body.email).toLowerCase(),p=str(body.password,200);if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Correo inválido.');if(p.length<10)fail('La contraseña debe tener al menos 10 caracteres.');if(!['admin','consumer'].includes(body.role))fail('Rol inválido.');(await db.prepare('INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)').run(name,email,passwordHash(p),body.role));return json(res,201,{ok:true})}
  fail('Ruta no encontrada.',404);
- }catch(e){if(e.code==='23505'||(e.code?.startsWith('ERR_SQLITE')&&e.message.includes('UNIQUE')))return json(res,409,{error:'Ya existe un registro con ese nombre o correo.'});if(!e.status)console.error(e);json(res,e.status||500,{error:e.status?e.message:'Ocurrió un error. Inténtalo de nuevo.'})}
+ }catch(e){if(e.code==='23505'||(e.code?.startsWith('ERR_SQLITE')&&e.message.includes('UNIQUE')))return json(res,409,{error:'Ya existe un registro con ese nombre o correo.'});if(!e.status)console.error(e);json(res,e.status||500,{error:e.status?e.message:'Ocurrió un error. Inténtalo de nuevo.',...(Array.isArray(e.errors)?{errors:e.errors}:{})})}
 }
 const portIndex=process.argv.indexOf('--port');
 const port=Number(process.env.PORT||(portIndex>=0?process.argv[portIndex+1]:3000));

@@ -34,15 +34,11 @@ export async function salesReport(db, from, to) {
   const previous = (await db.prepare(`SELECT COUNT(*) orders, COALESCE(SUM(total),0) sales FROM invoices WHERE created>=? AND created<?`).get(range.previousStart, range.previousEnd));
   const change = summary.sales - previous.sales;
   const comparison = { ...previous, change, percent: previous.sales ? Math.round(change / previous.sales * 1000) / 10 : null };
-  const products = (await db.prepare(`SELECT l.product_id id, p.name, c.name category, c.type,
+  const products = (await db.prepare(`SELECT l.product_id id, p.name,
     SUM(l.quantity) units, SUM(l.quantity*l.price) sales FROM invoice_lines l
     JOIN invoices i ON i.id=l.invoice_id JOIN products p ON p.id=l.product_id
-    JOIN categories c ON c.id=p.category_id WHERE i.created>=? AND i.created<?
-    GROUP BY l.product_id,p.name,c.name,c.type ORDER BY units DESC, sales DESC, l.product_id`).all(...args));
-  const categories = (await db.prepare(`SELECT c.id, c.name, c.type, SUM(l.quantity) units,
-    SUM(l.quantity*l.price) sales FROM invoice_lines l JOIN invoices i ON i.id=l.invoice_id
-    JOIN products p ON p.id=l.product_id JOIN categories c ON c.id=p.category_id
-    WHERE i.created>=? AND i.created<? GROUP BY c.id ORDER BY sales DESC, c.id`).all(...args));
+    WHERE i.created>=? AND i.created<?
+    GROUP BY l.product_id,p.name ORDER BY units DESC, sales DESC, l.product_id`).all(...args));
   const monthly = range.days > 62;
   const daily = (await db.prepare(`SELECT strftime('${monthly ? '%Y-%m' : '%Y-%m-%d'}',created,'-5 hours') period,
     SUM(total) sales, COUNT(*) orders FROM invoices WHERE created>=? AND created<?
@@ -62,7 +58,7 @@ export async function salesReport(db, from, to) {
   const noSales = (await db.prepare(`SELECT p.id,p.name,p.stock FROM products p WHERE p.active=1 AND NOT EXISTS
     (SELECT 1 FROM invoice_lines l JOIN invoices i ON i.id=l.invoice_id
     WHERE l.product_id=p.id AND i.created>=? AND i.created<?) ORDER BY p.name`).all(...args));
-  return { range: { from, to, days: range.days }, summary, comparison, products, categories,
+  return { range: { from, to, days: range.days }, summary, comparison, products,
     trend, granularity: monthly ? 'month' : 'day', stock, noSales };
 }
 

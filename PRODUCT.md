@@ -3,13 +3,13 @@
 ## Platform
 web
 ## Stack
-Delegada por el usuario: Node.js, SQLite y HTML/CSS/JavaScript, sin dependencias de ejecución. Aplicación local en este entorno; publicación pendiente de infraestructura compatible.
+Delegada por el usuario: Node.js, PostgreSQL en Vercel, SQLite local y HTML/CSS/JavaScript. Publicada en GitHub y Vercel.
 ## Users
 Administrador de tienda y consumidores. Ambos registran consumos.
 ## Product Purpose
 Controlar existencias y salidas de productos, asociar consumos a una persona y emitir cuentas de cobro.
 ## Capabilities and Constraints
-Login con roles; filtros Comida/Bebida; categorías como dulces y papas creadas por el administrador; inventario persistente; historial de movimientos; cuentas imprimibles; usuarios gestionados por el administrador. Moneda inicial COP como supuesto reversible. Cuentas de cobro, sin pretensión de factura electrónica fiscal.
+Login con roles; productos por nombre, sin categorías ni separación Comida/Bebida; importación Excel con vista previa y reemplazo de existencias; inventario persistente; historial de movimientos; cuentas imprimibles; usuarios gestionados por el administrador. Moneda inicial COP como supuesto reversible. Cuentas de cobro, sin pretensión de factura electrónica fiscal.
 ## Brand Commitments
 Sin identidad suministrada. Nombre provisional La Esquina; diseño delegado por el usuario. Consultar UI UX Pro Max, Impeccable y Ponytail solicitadas.
 ## Evidence on Hand

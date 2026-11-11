@@ -49,7 +49,7 @@ test('sales use historical invoice prices and complete period, not current price
     assert.equal(r.comparison.change,6000);
     assert.equal(r.comparison.percent,600);
     assert.deepEqual(r.products.map(p=>[p.id,p.units,p.sales]),[[1,2,5000],[2,1,2000]]);
-    assert.equal(r.categories.reduce((s,c)=>s+c.sales,0),r.summary.sales);
+    assert.equal(r.products.reduce((s,p)=>s+p.sales,0),r.summary.sales);
     assert.equal(r.trend.length,30);
     assert.equal(r.trend[0].sales,5000);
     assert.equal(r.trend[29].sales,2000);

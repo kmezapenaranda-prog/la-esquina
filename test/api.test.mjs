@@ -43,7 +43,7 @@ test('authentication, permissions and inventory accounting',async()=>{
 
  assert.equal((await api('movements','POST',{product_id:p.id,quantity:10,kind:'Entrada',note:'Reposición'},admin)).status,201);
  assert.equal((await api('state','GET',null,admin)).data.products[0].stock,p.stock+8);
- assert.equal((await api('categories','POST',{name:'Panadería',type:'Comida'},admin)).status,201);
+ assert.equal((await api('categories','POST',{name:'Panadería'},admin)).status,404);
  assert.equal((await api('users','POST',{name:'Prueba',email:'prueba@test.co',password:'UnaClaveSegura!',role:'consumer'},admin)).status,201);
  const other=(await api('login','POST',{email:'prueba@test.co',password:'UnaClaveSegura!'})).cookie;assert.equal((await api('state','GET',null,other)).data.invoices.length,0);
  assert.equal((await api('checkout','POST',{items:[{id:p.id,quantity:1},{id:p.id,quantity:1}]},consumer)).status,400);

@@ -25,10 +25,10 @@ Los botones de prueba rellenan el formulario; después pulsa Iniciar sesión. Ca
 
 ## Funciones
 
-- Administrador: crea y edita productos, define categorías dentro de Comida/Bebida, registra reposiciones y salidas con motivo, crea usuarios y confirma pagos recibidos.
+- Administrador: crea y edita productos, importa inventario desde Excel, registra reposiciones y salidas con motivo, crea usuarios y confirma pagos recibidos.
 - Ambos roles: registran consumos que descuentan existencias y crean una cuenta pendiente. El administrador asigna un consumidor; el consumidor solo puede asignarse a sí mismo.
 - Cuentas con líneas y precios históricos, total en COP, estado y salida imprimible para guardar como PDF mediante el navegador.
-- Filtros por tipo, categoría, nombre y stock bajo. Historial con persona, unidades y fecha (America/Bogota).
+- Búsqueda por nombre y filtro de stock bajo, sin categorías ni separación Comida/Bebida. Historial con persona, unidades y fecha (America/Bogota).
 - El consumidor únicamente recibe sus propias cuentas y movimientos. Permisos verificados en el servidor.
 - Existencias y cuentas se escriben en una transacción SQLite: una salida sin suficiente stock no genera cobro ni cambios parciales.
 
@@ -36,9 +36,9 @@ Los botones de prueba rellenan el formulario; después pulsa Iniciar sesión. Ca
 
 En **Análisis**, el administrador puede elegir este mes, mes anterior, hoy, últimos 7 o 30 días y un rango personalizado. Las fechas incluyen ambos extremos y se calculan con hora de Colombia (UTC-5).
 
-El informe presenta ventas registradas, unidades, promedio por cuenta, consumidores, comparación con un período anterior de igual duración, evolución diaria o mensual, productos más vendidos, categorías y stock actual por reponer. El análisis recorre todas las ventas del período y no depende del límite de 200 movimientos del historial. Las salidas manuales por daño o ajuste no son ventas. Los importes se calculan con los precios históricos de las cuentas.
+El informe presenta ventas registradas, unidades, promedio por cuenta, consumidores, comparación con un período anterior de igual duración, evolución diaria o mensual, productos más vendidos y stock actual por reponer. El análisis recorre todas las ventas del período y no depende del límite de 200 movimientos del historial. Las salidas manuales por daño o ajuste no son ventas. Los importes se calculan con los precios históricos de las cuentas.
 
-**Descargar Excel** genera un archivo `.xlsx` real con hojas de resumen, productos, categorías, evolución y notas. También está disponible CSV compatible con Excel.
+**Descargar Excel** genera un archivo `.xlsx` real con hojas de resumen, productos, evolución y notas. También está disponible CSV compatible con Excel.
 
 En **Cuentas mensuales por persona**, selecciona cualquier mes y una persona o todas. El Excel mensual incluye:
 
@@ -47,7 +47,7 @@ En **Cuentas mensuales por persona**, selecciona cualquier mes y una persona o t
 3. Detalle de productos: cuenta, producto histórico, unidades, precio y subtotal.
 4. Lectura del informe: mes, totales y reglas de cálculo.
 
-Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. No se calcula utilidad porque no hay costos de compra registrados. Las categorías y nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
+Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. No se calcula utilidad histórica: el costo actual del inventario no representa el costo de cada venta pasada. Los nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
 
 Estos informes son solo para administradores. Los consumidores conservan acceso exclusivamente a sus propias cuentas.
 
@@ -100,7 +100,7 @@ La aplicación mantiene SQLite en Windows y usa PostgreSQL persistente cuando se
 1. Crea un repositorio vacío y sube el código, incluidos `api/`, `database.mjs`, `vercel.json` y `package-lock.json`. No subas la carpeta `data`.
 2. Importa el repositorio en Vercel, usando Node 24.x, y conecta una base PostgreSQL dedicada (por ejemplo Neon) con la cadena de conexión TLS del proveedor.
 3. Configura como secretos de producción: `DATABASE_URL`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 12 caracteres). Nunca los publiques ni los pegues en el código. No compartas la base de producción con previews; cada entorno debe tener su propia base.
-4. Despliega y verifica `/api/health`, el acceso, la creación de categorías/productos y las descargas Excel.
+4. Despliega y verifica `/api/health`, el acceso, la creación de productos y las descargas Excel.
 
 En Vercel no se crean las cuentas de demostración ni se escribe SQLite en `/tmp`. La base empieza con un administrador y sin productos; el administrador crea el inventario y los consumidores. Los datos existentes de tu Windows no se transfieren automáticamente. Si falta la base persistente o las credenciales iniciales, la API devuelve un error de configuración en lugar de iniciar una tienda con datos efímeros. La contraseña inicial se usa solo cuando la base no tiene usuarios; después se cambia desde Mi cuenta.
 
@@ -130,3 +130,9 @@ El mismo QR sirve para todas las personas. Su invitación se guarda en la base d
 El servidor fija el rol de autorregistro a `consumer`, aunque se intente enviar otro rol. Solo un administrador puede obtener el QR mediante la API. El QR se puede compartir para permitir registros, pero no inicia sesión en cuentas existentes ni da permisos administrativos. Los correos son únicos y las contraseñas se guardan con scrypt. No se envía correo de verificación. Los intentos con invitaciones inválidas tienen un límite por proceso y dirección IP; los registros correctos no consumen ese límite para permitir grupos en la misma red.
 
 La nueva tabla `settings` guarda la invitación y se crea de forma aditiva, sin borrar usuarios, inventario ni cuentas. Las pruebas verifican decodificación del PNG, registro y entrada automática, rol forzado de consumidor, aislamiento de cuentas, contraseñas no coincidentes, invitaciones inválidas y registros simultáneos con el mismo correo.
+
+## Importar inventario desde Excel
+
+En **Inventario → Importar Excel**, descarga la plantilla y carga un `.xlsx` con las columnas **Producto, Precio venta, Cantidad, Precio unitario**. Precio unitario es el costo de compra por unidad, visible solo para administradores; Precio venta es el valor cobrado al consumidor. Usa valores enteros en COP, sin fórmulas. Se procesa la primera hoja, hasta 1.000 productos y 2 MB.
+
+Primero revisa la vista previa y luego confirma. Los nombres existentes actualizan precio, costo y **reemplazan la existencia actual**; los nuevos crean productos. Los productos ausentes del archivo se conservan. Nombres repetidos o filas inválidas impiden la importación completa. Si el inventario cambia desde la vista previa, vuelve a revisar el archivo antes de confirmar. Las diferencias quedan en movimientos como ajustes, sin crear ventas ni modificar cuentas anteriores.

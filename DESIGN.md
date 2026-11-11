@@ -4,7 +4,7 @@ Aplicación web operativa para inventario, consumos y cuentas. Diseño delegado 
 
 ## Dirección
 
-Una tienda de barrio organizada: superficie cálida, verde bosque, cifras legibles y controles explícitos. El primer panel presenta inventario y productos por reponer; las tareas están separadas en Inventario, Movimientos, Cuentas, Categorías y Consumidores. Catálogo y selección comparten pantalla en escritorio; en móvil la selección sigue a los productos.
+Una tienda de barrio organizada: superficie cálida, verde bosque, cifras legibles y controles explícitos. El primer panel presenta inventario y productos por reponer; las tareas están separadas en Inventario, Movimientos, Cuentas, Análisis y Consumidores. Catálogo y selección comparten pantalla en escritorio; en móvil la selección sigue a los productos.
 
 ## Tokens
 
