@@ -20,3 +20,6 @@ El usuario solicita análisis por períodos, ventas mensuales, compatibilidad co
 
 ## Autorregistro confirmado
 El usuario solicita que las personas se autorregistren escaneando un QR. El administrador comparte el mismo QR o enlace de invitación; cada persona crea una cuenta de consumidor con nombre, correo y contraseña. Los administradores se siguen creando desde el panel de administración, sin autorregistro administrativo. El enlace debe mantenerse válido entre despliegues.
+
+## Gestión comercial confirmada
+El usuario solicita los siete módulos: ganancia bruta con costo histórico, abonos, caja diaria, compras/proveedores, reposición por demanda, devoluciones/pérdidas y respaldo/auditoría. Cálculos y permisos en servidor; migración aditiva sin inventar costos ni fechas de cobro anteriores. Copias comerciales manuales cifradas, restaurables en la misma instalación preservando accesos y auditoría. Ver OPERATIONS.md.

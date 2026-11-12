@@ -1,3 +1,5 @@
+import * as ops from './operations.mjs';
+import {createBackup,previewRestore,restoreBackup} from './backup.mjs';
 import http from 'node:http';
 import {ensureInventoryImportSchema,previewInventoryImport,commitInventoryImport} from './inventory-import.mjs';
 import QRCode from 'qrcode';
@@ -17,6 +19,7 @@ await db.transaction(async()=>{
  if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock(21472431)');
  await db.exec(db.dialect==='postgres'?schema.replaceAll('INTEGER PRIMARY KEY','SERIAL PRIMARY KEY').replace('expires INTEGER','expires BIGINT'):schema);
 await ensureInventoryImportSchema(db);
+await ops.ensureOperationsSchema(db);
 if(!(await db.prepare('SELECT value FROM settings WHERE key=?').get('registration_invitation'))){await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('registration_invitation',randomBytes(32).toString('hex'));}
 if(!(await db.prepare('SELECT id FROM users LIMIT 1').get())){
  if(process.env.VERCEL){
@@ -47,8 +50,8 @@ async function handler(req,res){
  res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
  if(route==='/api/config'&&req.method==='GET')return json(res,200,{demo:!process.env.VERCEL});
  if(route==='/api/health'&&req.method==='GET')return json(res,200,{app:'la-esquina',ok:true});
- if(!route.startsWith('/api/')){const name=route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/coral.css'?'coral.css':/^\/fonts\/(?:fonts\.css|coral-\d+\.ttf)$/.test(route)?route.slice(1):route==='/images/market.jpg'?'images/market.jpg':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/inventory-import-ui.js'?'inventory-import-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':name.endsWith('.ttf')?'font/ttf':name.endsWith('.jpg')?'image/jpeg':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
- let body={};if(!['GET','HEAD'].includes(req.method)){if(req.headers.origin&&req.headers.origin!==`${req.headers['x-forwarded-proto']||'http'}://${req.headers.host}`)fail('Origen no permitido.',403);if(req.body&&typeof req.body==='object')body=req.body;else{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>(route==='/api/inventory-import/preview'?3000000:100000))fail('Solicitud demasiado grande.',413);chunks.push(c)}try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}')}catch{fail('Solicitud inválida.')}}}
+ if(!route.startsWith('/api/')){const name=route==='/operations-ui.js'?'operations-ui.js':route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/coral.css'?'coral.css':/^\/fonts\/(?:fonts\.css|coral-\d+\.ttf)$/.test(route)?route.slice(1):route==='/images/market.jpg'?'images/market.jpg':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/inventory-import-ui.js'?'inventory-import-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':name.endsWith('.ttf')?'font/ttf':name.endsWith('.jpg')?'image/jpeg':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
+ let body={};if(!['GET','HEAD'].includes(req.method)){if(req.headers.origin&&req.headers.origin!==`${req.headers['x-forwarded-proto']||'http'}://${req.headers.host}`)fail('Origen no permitido.',403);if(req.body&&typeof req.body==='object')body=req.body;else{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>(route.startsWith('/api/restore')?4000000:route==='/api/inventory-import/preview'?3000000:100000))fail('Solicitud demasiado grande.',413);chunks.push(c)}try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}')}catch{fail('Solicitud inválida.')}}}
  if(!body||typeof body!=='object'||Array.isArray(body))fail('Solicitud inválida.');
  const token=Object.fromEntries((req.headers.cookie||'').split(';').filter(x=>x.includes('=')).map(x=>x.trim().split('='))).session;
  let user=token?(await db.prepare('SELECT u.* FROM users u JOIN sessions s ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(token,Date.now())):null;
@@ -76,7 +79,7 @@ async function handler(req,res){
    const result=await db.prepare('INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)').run(name,email,passwordHash(body.password),'consumer');
    const id=Number(result.lastInsertRowid);
    await db.prepare('INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)').run(session,id,Date.now()+86400000);
-   return {id,name,email,role:'consumer'};
+   await ops.audit(db,id,'Autorregistro de consumidor',id,null,{name,email,role:'consumer'});return {id,name,email,role:'consumer'};
  });
  attempts.delete(key);return json(res,201,{user:created},{'Set-Cookie':cookie(session)});
  }
@@ -86,16 +89,35 @@ async function handler(req,res){
  const products=(await db.prepare('SELECT * FROM products WHERE active=1 ORDER BY id').all());
  for(const product of products){delete product.category_id;if(user.role!=='admin')delete product.unit_cost;}
  const invoices=(await db.prepare(`SELECT i.*,u.name consumer FROM invoices i JOIN users u ON i.user_id=u.id ${user.role==='admin'?'':'WHERE i.user_id=?'} ORDER BY i.id DESC`).all(...(user.role==='admin'?[]:[user.id])));
- for(const i of invoices)i.lines=(await db.prepare('SELECT * FROM invoice_lines WHERE invoice_id=?').all(i.id));
+ for(const i of invoices){i.lines=await db.prepare('SELECT * FROM invoice_lines WHERE invoice_id=?').all(i.id);i.payments=await db.prepare('SELECT id,amount,method,note,created,legacy FROM payments WHERE invoice_id=? ORDER BY id').all(i.id);i.paid=i.payments.reduce((sum,p)=>sum+p.amount,0);i.balance=i.total-i.paid;if(user.role!=='admin')for(const l of i.lines)delete l.unit_cost;}
  const movements=(await db.prepare(`SELECT m.*,p.name product,p.icon,u.name actor,c.name consumer FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.actor_id LEFT JOIN users c ON c.id=m.user_id ${user.role==='admin'?'':'WHERE m.user_id=?'} ORDER BY m.id DESC LIMIT 200`).all(...(user.role==='admin'?[]:[user.id])));
  const users=user.role==='admin'?(await db.prepare('SELECT id,name,email,role FROM users ORDER BY id').all()):[userView(user)];
  return json(res,200,{user:userView(user),products,invoices,movements,users})}
  if(route==='/api/checkout'&&req.method==='POST'){
  if(!Array.isArray(body.items)||!body.items.length||body.items.length>100)fail('Agrega productos a la cuenta.');
  const uid=user.role==='admin'?int(body.user_id,1):user.id;if(!(await db.prepare('SELECT id FROM users WHERE id=?').get(uid)))fail('Selecciona un consumidor.');
- const result=await transaction(async()=>{const ids=new Set();const lines=await Promise.all([...body.items].sort((a,b)=>a.id-b.id).map(async i=>{const id=int(i.id,1),q=int(i.quantity,1);if(ids.has(id))fail('Producto duplicado.');ids.add(id);const p=(await db.prepare('SELECT * FROM products WHERE id=? AND active=1'+(db.dialect==='postgres'?' FOR UPDATE':'')).get(id));if(!p)fail('Producto no disponible.');if(p.stock<q)fail(`No hay suficientes unidades de ${p.name}.`);return {...p,quantity:q}}));const total=lines.reduce((s,p)=>s+p.price*p.quantity,0);int(total);const date=new Date().toISOString();const id=Number((await db.prepare('INSERT INTO invoices(user_id,created,total) VALUES(?,?,?)').run(uid,date,total)).lastInsertRowid);for(const p of lines){(await db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(p.quantity,p.id));(await db.prepare('INSERT INTO invoice_lines(invoice_id,product_id,name,quantity,price) VALUES(?,?,?,?,?)').run(id,p.id,p.name,p.quantity,p.price));(await db.prepare('INSERT INTO movements(product_id,actor_id,user_id,kind,quantity,note,created,invoice_id) VALUES(?,?,?,?,?,?,?,?)').run(p.id,user.id,uid,'Salida',p.quantity,'Consumo registrado',date,id))}return {id,total}});return json(res,201,result)}
- if(route==='/api/password'&&req.method==='POST'){if(!passwordCheck(String(body.current||''),user.password))fail('La contraseña actual no es correcta.');const p=str(body.password,200);if(p.length<10)fail('Usa al menos 10 caracteres.');(await db.prepare('UPDATE users SET password=? WHERE id=?').run(passwordHash(p),user.id));(await db.prepare('DELETE FROM sessions WHERE user_id=? AND token<>?').run(user.id,token));return json(res,200,{ok:true})}
+ const checkoutTransaction=fn=>body.request_key?ops.mutate(db,user.id,body.request_key,'checkout',body,fn):transaction(fn);
+ const result=await checkoutTransaction(async()=>{const ids=new Set();const lines=await Promise.all([...body.items].sort((a,b)=>a.id-b.id).map(async i=>{const id=int(i.id,1),q=int(i.quantity,1);if(ids.has(id))fail('Producto duplicado.');ids.add(id);const p=(await db.prepare('SELECT * FROM products WHERE id=? AND active=1'+(db.dialect==='postgres'?' FOR UPDATE':'')).get(id));if(!p)fail('Producto no disponible.');if(p.stock<q)fail(`No hay suficientes unidades de ${p.name}.`);return {...p,quantity:q}}));const total=lines.reduce((s,p)=>s+p.price*p.quantity,0);int(total);const date=new Date().toISOString();const id=Number((await db.prepare('INSERT INTO invoices(user_id,created,total,original_total) VALUES(?,?,?,?)').run(uid,date,total,total)).lastInsertRowid);for(const p of lines){(await db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(p.quantity,p.id));(await db.prepare('INSERT INTO invoice_lines(invoice_id,product_id,name,quantity,price,unit_cost) VALUES(?,?,?,?,?,?)').run(id,p.id,p.name,p.quantity,p.price,p.unit_cost));(await db.prepare('INSERT INTO movements(product_id,actor_id,user_id,kind,quantity,note,created,invoice_id) VALUES(?,?,?,?,?,?,?,?)').run(p.id,user.id,uid,'Salida',p.quantity,'Consumo registrado',date,id))}await ops.audit(db,user.id,'Consumo registrado',id,null,{user_id:uid,total,items:lines.map(p=>({id:p.id,quantity:p.quantity,price:p.price,unit_cost:p.unit_cost}))});return {id,total}});return json(res,201,result)}
+ if(route==='/api/password'&&req.method==='POST'){if(!passwordCheck(String(body.current||''),user.password))fail('La contraseña actual no es correcta.');const p=str(body.password,200);if(p.length<10)fail('Usa al menos 10 caracteres.');await transaction(async()=>{await db.prepare('UPDATE users SET password=? WHERE id=?').run(passwordHash(p),user.id);await db.prepare('DELETE FROM sessions WHERE user_id=? AND token<>?').run(user.id,token);await ops.audit(db,user.id,'Contraseña cambiada',user.id,null,{otherSessionsClosed:true})});return json(res,200,{ok:true})}
  if(user.role!=='admin')fail('Solo el administrador puede realizar esta acción.',403);
+ if(/^\/api\/audit\/\d+$/.test(route)&&req.method==='GET'){const event=await db.prepare('SELECT * FROM audit_log WHERE id=?').get(+route.split('/').pop());if(!event)fail('Evento no encontrado.',404);return json(res,200,event)}
+ if(route==='/api/operations'&&req.method==='GET')return json(res,200,await ops.operationsState(db));
+ if(route==='/api/day-report'&&req.method==='GET')return json(res,200,await ops.dayReport(db,url.searchParams.get('day')));
+ if(route==='/api/backup'&&req.method==='POST')return json(res,200,await createBackup(db,user.id,body.password));
+ if(route==='/api/restore/preview'&&req.method==='POST')return json(res,200,await previewRestore(db,body.backup,body.password));
+ const actions={
+  '/api/suppliers':()=>ops.supplier(db,user.id,body),
+  '/api/purchases':()=>ops.purchase(db,user.id,body),
+  '/api/payments':()=>ops.payInvoice(db,user.id,ops.integer(body.invoice_id,1),body),
+  '/api/purchase-payments':()=>ops.payPurchase(db,user.id,ops.integer(body.purchase_id,1),body),
+  '/api/returns':()=>ops.returnSale(db,user.id,body),
+  '/api/losses':()=>ops.loss(db,user.id,body),
+  '/api/close-day':()=>ops.closeDay(db,user.id,body),
+  '/api/reopen-day':async()=>{const day=ops.text(body.day,10),note=ops.text(body.note);const old=await db.prepare('SELECT * FROM day_closures WHERE day=?').get(day);if(!old||old.status!=='Cerrado')fail('El día no está cerrado.');await db.prepare("UPDATE day_closures SET status='Reabierto' WHERE day=?").run(day);await ops.audit(db,user.id,'Caja reabierta',day,old,{note});return {ok:true}},
+  '/api/expenses':async()=>{await ops.assertDayOpen(db);if(!['cash','transfer','card'].includes(body.method))fail('Selecciona el medio de pago.');const amount=ops.integer(body.amount,1),note=ops.text(body.note);const r=await db.prepare('INSERT INTO expenses(actor_id,amount,method,note,created) VALUES(?,?,?,?,?)').run(user.id,amount,body.method,note,new Date().toISOString());await ops.audit(db,user.id,'Gasto registrado',r.lastInsertRowid,null,{amount,method:body.method,note});return {id:Number(r.lastInsertRowid)}},
+  '/api/restore/commit':()=>restoreBackup(db,user.id,body)
+ };
+ if(actions[route]&&req.method==='POST')return json(res,201,await ops.mutate(db,user.id,body.request_key,route,body,actions[route]));
  if(route==='/api/registration'&&req.method==='GET'){
    const invitation=await db.prepare('SELECT value FROM settings WHERE key=?').get('registration_invitation');
    const configured=process.env.PUBLIC_APP_URL||(process.env.VERCEL_PROJECT_PRODUCTION_URL?'https://'+process.env.VERCEL_PROJECT_PRODUCTION_URL:'');
@@ -123,18 +145,18 @@ async function handler(req,res){
   const id=await transaction(async()=>{
    if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock(21472432)');
    const id=Number((await db.prepare('INSERT INTO products(name,price,stock,minimum,icon,unit_cost) VALUES(?,?,?,?,?,?)').run(name,price,stock,minimum,str(body.icon||'🛍️',10),cost)).lastInsertRowid);
-   await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,'Entrada',stock,'Inventario inicial',new Date().toISOString());return id;
+   await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,'Entrada',stock,'Inventario inicial',new Date().toISOString());await ops.audit(db,user.id,'Producto creado',id,null,{name,price,stock,minimum,unit_cost:cost});return id;
   });return json(res,201,{id});
  }
  if(/^\/api\/products\/\d+$/.test(route)&&req.method==='PATCH'){
-  const id=+route.split('/').pop(),existing=await db.prepare('SELECT unit_cost FROM products WHERE id=? AND active=1').get(id);
+  return json(res,200,await transaction(async()=>{const id=+route.split('/').pop(),existing=await db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(id);
   if(!existing)fail('Producto no encontrado.',404);
   const cost=body.unit_cost===undefined?existing.unit_cost:body.unit_cost==null||body.unit_cost===''?null:int(body.unit_cost);
-  await db.prepare('UPDATE products SET name=?,price=?,minimum=?,icon=?,unit_cost=? WHERE id=?').run(str(body.name),int(body.price,1),int(body.minimum),str(body.icon||'🛍️',10),cost,id);return json(res,200,{ok:true});
+  await db.prepare('UPDATE products SET name=?,price=?,minimum=?,icon=?,unit_cost=? WHERE id=?').run(str(body.name),int(body.price,1),int(body.minimum),str(body.icon||'🛍️',10),cost,id);await ops.audit(db,user.id,'Producto editado',id,existing,await db.prepare('SELECT * FROM products WHERE id=?').get(id));return {ok:true};}));
  }
- if(route==='/api/movements'&&req.method==='POST'){const id=int(body.product_id,1),q=int(body.quantity,1),kind=body.kind;if(!['Entrada','Salida'].includes(kind))fail('Tipo inválido.');const note=str(body.note,200);await transaction(async()=>{const p=(await db.prepare('SELECT * FROM products WHERE id=? AND active=1'+(db.dialect==='postgres'?' FOR UPDATE':'')).get(id));if(!p)fail('Producto no encontrado.');if(kind==='Salida'&&p.stock<q)fail('Existencias insuficientes.');int(p.stock+(kind==='Entrada'?q:-q));(await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(kind==='Entrada'?q:-q,id));(await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,kind,q,note,new Date().toISOString()))});return json(res,201,{ok:true})}
- if(/^\/api\/invoices\/\d+\/pay$/.test(route)&&req.method==='POST'){const r=(await db.prepare("UPDATE invoices SET status='Pagada' WHERE id=? AND status='Pendiente'").run(+route.split('/')[3]));if(!r.changes)fail('La cuenta ya está pagada o no existe.');return json(res,200,{ok:true})}
- if(route==='/api/users'&&req.method==='POST'){const name=str(body.name),email=str(body.email).toLowerCase(),p=str(body.password,200);if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Correo inválido.');if(p.length<10)fail('La contraseña debe tener al menos 10 caracteres.');if(!['admin','consumer'].includes(body.role))fail('Rol inválido.');(await db.prepare('INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)').run(name,email,passwordHash(p),body.role));return json(res,201,{ok:true})}
+ if(route==='/api/movements'&&req.method==='POST'){const id=int(body.product_id,1),q=int(body.quantity,1),kind=body.kind;if(!['Entrada','Salida'].includes(kind))fail('Tipo inválido.');const note=str(body.note,200);await transaction(async()=>{const p=(await db.prepare('SELECT * FROM products WHERE id=? AND active=1'+(db.dialect==='postgres'?' FOR UPDATE':'')).get(id));if(!p)fail('Producto no encontrado.');if(kind==='Salida'&&p.stock<q)fail('Existencias insuficientes.');int(p.stock+(kind==='Entrada'?q:-q));(await db.prepare('UPDATE products SET stock=stock+? WHERE id=?').run(kind==='Entrada'?q:-q,id));(await db.prepare('INSERT INTO movements(product_id,actor_id,kind,quantity,note,created) VALUES(?,?,?,?,?,?)').run(id,user.id,kind,q,note,new Date().toISOString()));await ops.audit(db,user.id,'Ajuste de inventario',id,{stock:p.stock},{kind,quantity:q,note})});return json(res,201,{ok:true})}
+ if(/^\/api\/invoices\/\d+\/pay$/.test(route)&&req.method==='POST')return json(res,200,await transaction(()=>ops.payInvoice(db,user.id,+route.split('/')[3],body,true)));
+ if(route==='/api/users'&&req.method==='POST'){const name=str(body.name),email=str(body.email).toLowerCase(),p=str(body.password,200);if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('Correo inválido.');if(p.length<10)fail('La contraseña debe tener al menos 10 caracteres.');if(!['admin','consumer'].includes(body.role))fail('Rol inválido.');await transaction(async()=>{const r=await db.prepare('INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)').run(name,email,passwordHash(p),body.role);await ops.audit(db,user.id,'Usuario creado',r.lastInsertRowid,null,{name,email,role:body.role})});return json(res,201,{ok:true})}
  fail('Ruta no encontrada.',404);
  }catch(e){if(e.code==='23505'||(e.code?.startsWith('ERR_SQLITE')&&e.message.includes('UNIQUE')))return json(res,409,{error:'Ya existe un registro con ese nombre o correo.'});if(!e.status)console.error(e);json(res,e.status||500,{error:e.status?e.message:'Ocurrió un error. Inténtalo de nuevo.',...(Array.isArray(e.errors)?{errors:e.errors}:{})})}
 }

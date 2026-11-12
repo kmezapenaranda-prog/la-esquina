@@ -1,3 +1,4 @@
+import {audit} from './operations.mjs';
 import {readSheet} from 'read-excel-file/node';
 import {unzipSync} from 'fflate';
 import {randomBytes} from 'node:crypto';
@@ -126,6 +127,7 @@ export async function commitInventoryImport(db,token,actor){
   }
   const result={created,updated,products:rows.length,entries,exits,mode:'replace'};
   await db.prepare('UPDATE inventory_imports SET status=?,payload=?,result=? WHERE id=?').run('applied','{}',JSON.stringify(result),token);
+  await audit(db,actor,'Inventario importado',filename,null,{...result,rows:rows.map(row=>({name:row.name,before:row.expected,stock:row.stock,price:row.price,unit_cost:row.unit_cost}))});
   return result;
  });
 }

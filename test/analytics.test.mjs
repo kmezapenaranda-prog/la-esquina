@@ -6,18 +6,20 @@ import { reportRange, salesReport, monthlyAccounts } from '../analytics.mjs';
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE invoices(id INTEGER PRIMARY KEY,user_id INTEGER,created TEXT,total INTEGER,status TEXT);
-    CREATE TABLE invoice_lines(invoice_id INTEGER,product_id INTEGER,name TEXT,quantity INTEGER,price INTEGER,id INTEGER PRIMARY KEY);
+    CREATE TABLE invoice_lines(invoice_id INTEGER,product_id INTEGER,name TEXT,quantity INTEGER,price INTEGER,id INTEGER PRIMARY KEY,unit_cost INTEGER,returned_quantity INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE payments(invoice_id INTEGER,amount INTEGER); CREATE TABLE losses(quantity INTEGER,unit_cost INTEGER,created TEXT);
     CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT,email TEXT,role TEXT);
     INSERT INTO users VALUES(1,'Administrador','admin@test.co','admin'),(2,'Ana','ana@test.co','consumer'),(3,'Luis','luis@test.co','consumer'),(4,'Sin consumo','sin@test.co','consumer');
-    CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT,category_id INTEGER,price INTEGER,stock INTEGER,minimum INTEGER,active INTEGER);
+    CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT,category_id INTEGER,price INTEGER,stock INTEGER,minimum INTEGER,active INTEGER,unit_cost INTEGER);
     CREATE TABLE categories(id INTEGER PRIMARY KEY,name TEXT,type TEXT);
     INSERT INTO categories VALUES(1,'Papas','Comida'),(2,'Bebidas','Bebida');
-    INSERT INTO products VALUES(1,'Papas',1,99999,4,5,1),(2,'Agua',2,2000,20,5,1),(3,'Sin ventas',1,1500,8,5,1);
+    INSERT INTO products VALUES(1,'Papas',1,99999,4,5,1,NULL),(2,'Agua',2,2000,20,5,1,NULL),(3,'Sin ventas',1,1500,8,5,1,NULL);
     INSERT INTO invoices VALUES
       (1,2,'2026-11-01T04:59:59.999Z',1000,'Pagada'),
       (2,2,'2026-11-01T05:00:00.000Z',5000,'Pendiente'),
       (3,3,'2026-12-01T04:59:59.999Z',2000,'Pagada'),
       (4,2,'2026-12-01T05:00:00.000Z',9000,'Pendiente');
+    INSERT INTO payments VALUES(1,1000),(3,2000);
     INSERT INTO invoice_lines(invoice_id,product_id,name,quantity,price) VALUES(1,1,'Papas',1,1000),(2,1,'Nombre histórico',2,2500),(3,2,'Agua',1,2000),(4,1,'Papas',3,3000);`);
   return db;
 }

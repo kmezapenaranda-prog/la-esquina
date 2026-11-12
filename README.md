@@ -42,12 +42,12 @@ El informe presenta ventas registradas, unidades, promedio por cuenta, consumido
 
 En **Cuentas mensuales por persona**, selecciona cualquier mes y una persona o todas. El Excel mensual incluye:
 
-1. Resumen de cada persona: cantidad de cuentas, total consumido, saldado y pendiente.
+1. Resumen de cada persona: cantidad de cuentas, total consumido neto, abonado neto y pendiente.
 2. Cuentas del mes: consumidor, correo, número de cuenta, fecha, total y estado.
 3. Detalle de productos: cuenta, producto histórico, unidades, precio y subtotal.
 4. Lectura del informe: mes, totales y reglas de cálculo.
 
-Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. La ganancia bruta se estima con un margen fijo del 30% sobre las ventas, antes de gastos e impuestos; incluye crédito y no equivale a efectivo recibido. No utiliza costos históricos. Los nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
+Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. La ganancia bruta con costo histórico se calcula en las ventas nuevas con costo conocido. Las antiguas sin costo se indican por separado. Se conserva también la comparación estimada del 30%, antes de gastos e impuestos; incluye crédito y no equivale a efectivo recibido. Los nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
 
 Estos informes son solo para administradores. Los consumidores conservan acceso exclusivamente a sus propias cuentas.
 
@@ -137,8 +137,12 @@ En **Inventario → Importar Excel**, descarga la plantilla y carga un `.xlsx` c
 
 Primero revisa la vista previa y luego confirma. Los nombres existentes actualizan precio, costo y **reemplazan la existencia actual**; los nuevos crean productos. Los productos ausentes del archivo se conservan. Nombres repetidos o filas inválidas impiden la importación completa. Si el inventario cambia desde la vista previa, vuelve a revisar el archivo antes de confirmar. Las diferencias quedan en movimientos como ajustes, sin crear ventas ni modificar cuentas anteriores.
 
-El análisis muestra ganancia estimada por unidad y producto, valor actual del inventario y ganancia potencial si se vende todo. Destaca los líderes por unidades (incluidos empates) y productos activos con stock cuya venta es de máximo una unidad por semana, proporcional al período. Es una señal para revisar compras considerando antigüedad y disponibilidad; para períodos de menos de 7 días se recomienda ampliar el rango. XLSX y CSV incluyen estos datos.
+El análisis muestra ganancia con costo histórico y estimada por unidad y producto, valor actual del inventario y ganancia potencial si se vende todo. Destaca los líderes por unidades (incluidos empates) y productos activos con stock cuya venta es de máximo una unidad por semana, proporcional al período. Es una señal para revisar compras considerando antigüedad y disponibilidad; para períodos de menos de 7 días se recomienda ampliar el rango. XLSX y CSV incluyen estos datos.
 
 ## Apariencia Coral Stay
 
 Diseño adaptado del documento proporcionado por el usuario: coral, blanco y gris suave, Nunito Sans y DM Sans alojadas localmente, fotografía en el acceso y tarjetas redondeadas. Ver `DESIGN.md` para colores, fuentes, créditos y adaptación móvil.
+
+## Gestión comercial
+
+En **Gestión** están compras/proveedores, caja diaria, gastos, pérdidas, respaldo cifrado y auditoría. Abonos y devoluciones se registran desde cada cuenta. Análisis incluye costos históricos y reposición para 14 días. Consulta [OPERATIONS.md](OPERATIONS.md) para reglas, migración de cuentas anteriores, restauración y límites.

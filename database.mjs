@@ -7,6 +7,7 @@ export async function openDatabase({ directory, url = process.env.DATABASE_URL }
   if (url) {
     const { Pool, types } = await import('pg');
     types.setTypeParser(20, Number);
+    types.setTypeParser(1700, Number);
     const pool = new Pool({ connectionString: url, max: 3, connectionTimeoutMillis: 10000, idleTimeoutMillis: 10000 });
     const translate = sql => {
       let index = 0;
@@ -23,7 +24,7 @@ export async function openDatabase({ directory, url = process.env.DATABASE_URL }
           get: async (...args) => (await query(sql,args)).rows[0],
           all: async (...args) => (await query(sql,args)).rows,
           run: async (...args) => {
-            const returnsId = /^INSERT INTO (users|categories|products|invoices|invoice_lines|movements)\b/i.test(sql);
+            const returnsId = /^INSERT INTO (users|categories|products|invoices|invoice_lines|movements|payments|suppliers|purchases|purchase_lines|purchase_payments|expenses|returns|losses|audit_log)\b/i.test(sql);
             const result = await query(sql + (returnsId ? ' RETURNING id' : ''), args);
             return { changes: result.rowCount, lastInsertRowid: result.rows[0]?.id };
           }
@@ -33,6 +34,7 @@ export async function openDatabase({ directory, url = process.env.DATABASE_URL }
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
+          await client.query('SELECT pg_advisory_xact_lock(21472433)');
           const result = await context.run(client, fn);
           await client.query('COMMIT');
           return result;

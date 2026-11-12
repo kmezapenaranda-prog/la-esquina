@@ -17,3 +17,6 @@ La fotografía decorativa del acceso se guarda en `public/images/market.jpg`: Un
 Se conserva la navegación lateral en escritorio para las tareas administrativas; la cabecera permanece visible al desplazarse. En celular se usa navegación inferior, menú Más y tablas en fichas. Se conservan todos los flujos, permisos, cálculos y exportaciones. El documento de referencia describe reservas; sus campos de viajes no se incorporan al inventario.
 
 La capa `public/coral.css` define la adaptación sobre la estructura existente. Revisión visual realizada en Chrome compartido: panel administrativo en escritorio, panel y menú en ancho móvil equivalente a unos 420px CSS, formularios y bienvenida con fotografía. Las 15 pruebas existentes pasan.
+
+## Gestión comercial
+Navegación Gestión con cuatro secciones: compras/proveedores, caja diaria, pérdidas y respaldo/auditoría. En móvil se encuentra en Más. Formularios apilados, errores junto a la acción y confirmación explícita para devoluciones y restauración. Se distingue utilidad con costo histórico, estimación al 30% y ganancia potencial.
