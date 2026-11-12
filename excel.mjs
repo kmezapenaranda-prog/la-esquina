@@ -14,16 +14,18 @@ export async function salesWorkbook(report) {
   const sheets=[
     sheet('Resumen',['Indicador','Valor'],[
       ['Desde',report.range.from],['Hasta',report.range.to],['Moneda','COP'],['Ventas registradas',s.sales],
-      ['Unidades vendidas',s.units],['Cuentas',s.orders],['Consumidores',s.customers],['Promedio por cuenta COP',s.average],
+      ['Ganancia bruta estimada COP',s.estimatedProfit],['Margen sobre venta %',30],['Ganancia potencial inventario actual COP',report.inventory.potentialProfit],['Unidades vendidas',s.units],['Cuentas',s.orders],['Consumidores',s.customers],['Promedio por cuenta COP',s.average],
       ['Pendiente actual del período COP',s.pending],['Cuentas saldadas del período COP',s.settled],
       ['Ventas del período anterior COP',report.comparison.sales],['Diferencia COP',report.comparison.change],
       ['Variación %',report.comparison.percent??'Sin ventas anteriores']]),
-    sheet('Productos',['Producto','Unidades','Ventas COP'],report.products.map(p=>[p.name,p.units,p.sales]),[2]),
+    sheet('Productos',['Producto','Unidades','Ventas COP','Ganancia por unidad estimada COP','Ganancia estimada COP'],report.products.map(p=>[p.name,p.units,p.sales,p.estimatedProfitPerUnit,p.estimatedProfit]),[2,3,4]),
+    sheet('Inventario actual',['Producto','Stock','Precio venta COP','Ganancia por unidad estimada COP','Ganancia potencial COP'],report.inventory.products.map(p=>[p.name,p.stock,p.price,p.estimatedProfitPerUnit,p.potentialProfit]),[2,3,4]),
+    sheet('Baja venta',['Producto','Unidades del período','Stock actual'],report.insights.lowSales.map(p=>[p.name,p.units,p.stock])),
     sheet('Evolución',['Período','Ventas COP','Cuentas'],report.trend.map(t=>[t.period,t.sales,t.orders]),[1]),
     sheet('Notas',['Concepto','Explicación'],[
       ['Zona horaria','America/Bogota; ambos días incluidos'],['Ventas','Consumos registrados, incluidos los que siguen a crédito. No se incluyen ajustes de inventario.'],
       ['Estado de pago','Estado actual de cuentas emitidas en el período. No equivale al dinero recibido en el período.'],
-      ['Comparación','Mismo número de días inmediatamente anteriores al rango.'],['Utilidad','No calculada: el costo actual del inventario no equivale al costo histórico de cada venta.']])
+      ['Comparación','Mismo número de días inmediatamente anteriores al rango.'],['Ganancia estimada','Ventas × 30% de margen sobre venta. Bruta, antes de gastos e impuestos; incluye crédito. No usa costos históricos.'],['Inventario','Stock y precios actuales. Ganancia potencial aún no ganada.'],['Baja venta','Productos activos con stock y máximo 1 unidad por semana, proporcional al rango. Revisar disponibilidad y antigüedad antes de comprar; períodos menores de 7 días son insuficientes.']])
   ];
   return writeExcelFile(sheets,{fontFamily:'Calibri',fontSize:11}).toBuffer();
 }

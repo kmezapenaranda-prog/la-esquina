@@ -58,8 +58,27 @@ export async function salesReport(db, from, to) {
   const noSales = (await db.prepare(`SELECT p.id,p.name,p.stock FROM products p WHERE p.active=1 AND NOT EXISTS
     (SELECT 1 FROM invoice_lines l JOIN invoices i ON i.id=l.invoice_id
     WHERE l.product_id=p.id AND i.created>=? AND i.created<?) ORDER BY p.name`).all(...args));
+  // Fixed gross margin on revenue, not a markup on purchase cost.
+  const margin = 0.30;
+  for (const product of products) {
+    product.estimatedProfit = Math.round(product.sales * margin);
+    product.estimatedProfitPerUnit = Math.round(product.sales * margin / product.units);
+  }
+  summary.estimatedProfit = products.reduce((sum, p) => sum + p.estimatedProfit, 0);
+  const inventory = await db.prepare('SELECT id,name,price,stock FROM products WHERE active=1 ORDER BY name,id').all();
+  const sold = new Map(products.map(p => [p.id, p]));
+  const inventoryProducts = inventory.map(p => ({ ...p, units: sold.get(p.id)?.units || 0,
+    estimatedProfitPerUnit: Math.round(p.price * margin),
+    potentialProfit: Math.round(p.price * p.stock * margin) }));
+  const lowSales = inventoryProducts.filter(p => p.stock > 0 && p.units <= range.days / 7)
+    .sort((a,b) => a.units-b.units || b.stock-a.stock || a.id-b.id);
+  const insights = { bestSellers: products.filter(p => p.units === products[0]?.units), lowSales,
+    weeklyThreshold: 1, shortPeriod: range.days < 7 };
+  const inventorySummary = { products: inventoryProducts,
+    saleValue: inventoryProducts.reduce((sum,p) => sum+p.price*p.stock,0),
+    potentialProfit: inventoryProducts.reduce((sum,p) => sum+p.potentialProfit,0) };
   return { range: { from, to, days: range.days }, summary, comparison, products,
-    trend, granularity: monthly ? 'month' : 'day', stock, noSales };
+    margin, insights, inventory: inventorySummary, trend, granularity: monthly ? 'month' : 'day', stock, noSales };
 }
 
 export async function monthlyAccounts(db, month, person = '') {

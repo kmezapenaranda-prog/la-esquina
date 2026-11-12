@@ -47,7 +47,7 @@ En **Cuentas mensuales por persona**, selecciona cualquier mes y una persona o t
 3. Detalle de productos: cuenta, producto histórico, unidades, precio y subtotal.
 4. Lectura del informe: mes, totales y reglas de cálculo.
 
-Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. No se calcula utilidad histórica: el costo actual del inventario no representa el costo de cada venta pasada. Los nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
+Los saldos muestran el **estado actual de las cuentas emitidas en ese período**. No son cobros recibidos durante el período y no incluyen deudas de otros meses. La ganancia bruta se estima con un margen fijo del 30% sobre las ventas, antes de gastos e impuestos; incluye crédito y no equivale a efectivo recibido. No utiliza costos históricos. Los nombres de productos del análisis general son los actuales; el detalle de cada cuenta conserva su descripción histórica.
 
 Estos informes son solo para administradores. Los consumidores conservan acceso exclusivamente a sus propias cuentas.
 
@@ -136,3 +136,5 @@ La nueva tabla `settings` guarda la invitación y se crea de forma aditiva, sin 
 En **Inventario → Importar Excel**, descarga la plantilla y carga un `.xlsx` con las columnas **Producto, Precio venta, Cantidad, Precio unitario**. Precio unitario es el costo de compra por unidad, visible solo para administradores; Precio venta es el valor cobrado al consumidor. Usa valores enteros en COP, sin fórmulas. Se procesa la primera hoja, hasta 1.000 productos y 2 MB.
 
 Primero revisa la vista previa y luego confirma. Los nombres existentes actualizan precio, costo y **reemplazan la existencia actual**; los nuevos crean productos. Los productos ausentes del archivo se conservan. Nombres repetidos o filas inválidas impiden la importación completa. Si el inventario cambia desde la vista previa, vuelve a revisar el archivo antes de confirmar. Las diferencias quedan en movimientos como ajustes, sin crear ventas ni modificar cuentas anteriores.
+
+El análisis muestra ganancia estimada por unidad y producto, valor actual del inventario y ganancia potencial si se vende todo. Destaca los líderes por unidades (incluidos empates) y productos activos con stock cuya venta es de máximo una unidad por semana, proporcional al período. Es una señal para revisar compras considerando antigüedad y disponibilidad; para períodos de menos de 7 días se recomienda ampliar el rango. XLSX y CSV incluyen estos datos.

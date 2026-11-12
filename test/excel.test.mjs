@@ -15,7 +15,11 @@ function inspect(buffer, sheetNames) {
 
 test('real Excel sales workbook has numeric amounts, separate sheets and safe text', async () => {
   const report={range:{from:'2026-11-01',to:'2026-11-30'},summary:{sales:5000,units:2,orders:1,customers:1,average:5000,pending:5000,settled:0},comparison:{sales:0,change:5000,percent:null},products:[{name:'=1+1 <prueba>',category:'Dulces',type:'Comida',units:2,sales:5000}],categories:[{name:'Dulces',type:'Comida',units:2,sales:5000}],trend:[{period:'2026-11-01',sales:5000,orders:1}]};
-  const xml=inspect(await salesWorkbook(report),['Resumen','Productos','Evolución','Notas']);
+  report.summary.estimatedProfit=1500; report.products[0].estimatedProfit=1500; report.products[0].estimatedProfitPerUnit=750;
+  report.inventory={potentialProfit:3000,products:[{name:'Papas',stock:4,price:2500,estimatedProfitPerUnit:750,potentialProfit:3000}]};
+  report.insights={lowSales:[{name:'Papas',units:2,stock:4}]};
+  const xml=inspect(await salesWorkbook(report),['Resumen','Productos','Inventario actual','Baja venta','Evolución','Notas']);
+  assert.match(xml,/<v>1500<\/v>/); assert.ok(xml.includes('Ganancia estimada COP'));
   assert.match(xml,/<v>5000<\/v>/);
   assert.ok(xml.includes('=1+1 &lt;prueba&gt;'));
 });

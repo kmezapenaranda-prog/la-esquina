@@ -98,3 +98,28 @@ test('monthly accounts group each person, preserve zero-consumption people and i
     await assert.rejects(()=>monthlyAccounts(db,'2026-11','999'),e=>e.status===400);
   } finally {db.close()}
 });
+
+
+test('30 percent gross margin, tied best sellers and low sales use selected days and current stock', async () => {
+  const db=fixture();
+  try {
+    const r=await salesReport(db,'2026-11-01','2026-11-30');
+    assert.equal(r.margin,.3);
+    assert.equal(r.summary.estimatedProfit,2100);
+    assert.equal(r.products[0].estimatedProfit,1500);
+    assert.equal(r.products[0].estimatedProfitPerUnit,750);
+    assert.deepEqual(r.insights.bestSellers.map(p=>p.id),[1]);
+    assert.deepEqual(r.insights.lowSales.map(p=>p.id),[3,2,1]);
+    assert.equal(r.inventory.products.find(p=>p.id===2).potentialProfit,12000);
+    db.exec('UPDATE products SET stock=0 WHERE id=3');
+    const day=await salesReport(db,'2026-11-01','2026-11-01');
+    assert.equal(day.insights.shortPeriod,true);
+    assert.deepEqual(day.insights.lowSales.map(p=>p.id),[2]);
+    db.exec("INSERT INTO invoices VALUES(8,2,'2026-11-02T05:00:00Z',2000,'Pagada'); INSERT INTO invoice_lines(invoice_id,product_id,name,quantity,price) VALUES(8,2,'Agua',1,2000)");
+    const tied=await salesReport(db,'2026-11-01','2026-11-30');
+    assert.deepEqual(tied.insights.bestSellers.map(p=>p.id),[1,2]);
+    const empty=await salesReport(db,'2026-08-01','2026-08-31');
+    assert.equal(empty.summary.estimatedProfit,0);
+    assert.equal(empty.insights.bestSellers.length,0);
+  } finally {db.close()}
+});
