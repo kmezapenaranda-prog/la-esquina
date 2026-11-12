@@ -1,49 +1,19 @@
-# Diseño de La Esquina
+# Diseño de La Esquina · Coral Stay
 
-Aplicación web operativa para inventario, consumos y cuentas. Diseño delegado por el usuario; nombre provisional. Datos iniciales identificados como demostración.
+La dirección visual sigue el documento `coral-stay-DESIGN.md` aportado por el usuario. Se adapta al trabajo diario de una tienda: inventario, consumos, cuentas, importación Excel y análisis. Se conserva la marca La Esquina.
 
-## Dirección
+## Sistema visual
 
-Una tienda de barrio organizada: superficie cálida, verde bosque, cifras legibles y controles explícitos. El primer panel presenta inventario y productos por reponer; las tareas están separadas en Inventario, Movimientos, Cuentas, Análisis y Consumidores. Catálogo y selección comparten pantalla en escritorio; en móvil la selección sigue a los productos.
+Fondo blanco y superficies #F7F7F7; texto #222222 y secundario #717171; bordes #DDDDDD. Coral #FF5A5F para la marca y énfasis, con variante #CF3944 en acciones con texto blanco para mejorar contraste. Turquesa #007F76 para gráficos y confirmaciones. La navegación seleccionada usa fondo #222222 en escritorio y coral suave en celular.
 
-## Tokens
+Nunito Sans en títulos y cifras; DM Sans en texto y controles; JetBrains Mono en el enlace compartible. Fuentes obtenidas de Google Fonts y alojadas en el proyecto, con sus licencias OFL en `public/fonts`. No requieren solicitudes a Google al abrir la tienda.
 
-| Token | Valor | Uso |
-| --- | --- | --- |
-| bg | #f7f8f4 | Fondo |
-| paper | #ffffff | Superficie de trabajo |
-| ink | #243b32 | Texto principal |
-| muted | #65736b | Texto secundario |
-| green | #234f3d | Acción principal |
-| pale | #eaf0e7 | Estado y selección |
-| orange | #b54b25 | Énfasis de reposición |
-| line | #e1e6df | Separadores |
-| radius | 14px | Paneles |
+Tarjetas de 12px, paneles amplios, botones e inputs de 8px, buscador y etiquetas en forma de píldora. Sombras suaves, foco visible y controles principales de al menos 48px. El catálogo tiene elevación al pasar el puntero, respetando la preferencia de movimiento reducido. Los precios permanecen destacados.
 
-Tipografía: pila local Inter/system-ui, sin descargas. Datos monetarios en números tabulares. Iconos SVG de trazo consistente. Sin imágenes externas ni fuentes remotas.
+La fotografía decorativa del acceso se guarda en `public/images/market.jpg`: Unsplash, https://images.unsplash.com/photo-1542838132-92c53300491e. No representa los productos reales de la tienda. El catálogo mantiene iconos hasta contar con fotos reales de cada artículo.
 
-## Comportamiento
+## Adaptación a la aplicación
 
-Campos etiquetados, foco visible, mensajes de error, controles deshabilitados durante envíos y diálogo de confirmación antes de generar cuenta o registrar pago. Entradas manuales requieren motivo. Los consumos se cobran a precios del servidor; su precio histórico no cambia al editar un producto.
+Se conserva la navegación lateral en escritorio para las tareas administrativas; la cabecera permanece visible al desplazarse. En celular se usa navegación inferior, menú Más y tablas en fichas. Se conservan todos los flujos, permisos, cálculos y exportaciones. El documento de referencia describe reservas; sus campos de viajes no se incorporan al inventario.
 
-Estados vacíos con una explicación y recuperación. Stock expresado con texto además de color. Búsqueda inmediata conservando el foco. Navegación inferior en pantallas pequeñas. Movimiento reducido respeta la preferencia del sistema.
-
-## Skills consultadas
-
-- UI UX Pro Max: consulta de sistema de diseño para retail/inventario. Se adoptaron diseño plano, separación clara, contraste, navegación por teclado y estados; se descartó su patrón de marketing por no corresponder al panel operativo.
-- Impeccable: guías de trabajo operativo y craft-floor; su cargador de contexto no pudo ejecutarse por permisos de caché. No se completó su circuito automatizado de conceptos y revisión, por lo que no se declara certificación de la skill.
-- Ponytail: ejecución sin dependencias, SQLite transaccional y PDF mediante la función de impresión del navegador.
-
-## Verificación y límites
-
-Revisión visual de acceso, panel y catálogo en Chrome compartido (ventana de aproximadamente 1180px). Revisión móvil completada en ventana estrecha con ancho equivalente a 400 px CSS; impresión pendiente. Pruebas de API para permisos y dinero aprobadas; el clic final de consumo fue bloqueado por auto-review. Publicación pendiente de alojamiento Node con almacenamiento persistente.
-
-## Análisis y cuentas mensuales (v1.1)
-
-Se conserva la identidad visual. La sección Análisis usa rangos inclusivos de Colombia, comparación con igual cantidad de días y una tendencia con alternativa tabular. Excel y CSV exportan el período aplicado. El informe mensual tiene su propio selector de mes/persona y resúmenes rotulados para distinguirlo del análisis general. Los saldos son estados actuales, sin presentarlos como flujo de caja.
-
-En móvil, la navegación principal muestra Resumen, Análisis, Inventario, Cuentas y Más. Las tablas cambian a fichas etiquetadas, conservando datos y acciones. El menú Más contiene todas las secciones. Formularios y controles de fecha mantienen un mínimo táctil de 44 px. Se revisaron panel, formularios, fichas y menú a ancho equivalente a 400 px CSS.
-
-## Registro por QR
-
-El panel de Consumidores muestra el QR bajo demanda en una sección de la misma página, con enlace copiable y PNG descargable. No bloquea el resto del panel con un diálogo. El formulario público conserva el estilo del acceso, identifica expresamente la cuenta como consumidor y no obliga a transcribir una invitación cuando se abre desde el QR. Incluye confirmación de contraseña, errores y estado de envío, y se apila en móvil. Se revisó visualmente en escritorio y en ancho equivalente a 400 px CSS.
+La capa `public/coral.css` define la adaptación sobre la estructura existente. Revisión visual realizada en Chrome compartido: panel administrativo en escritorio, panel y menú en ancho móvil equivalente a unos 420px CSS, formularios y bienvenida con fotografía. Las 15 pruebas existentes pasan.

@@ -138,3 +138,7 @@ En **Inventario → Importar Excel**, descarga la plantilla y carga un `.xlsx` c
 Primero revisa la vista previa y luego confirma. Los nombres existentes actualizan precio, costo y **reemplazan la existencia actual**; los nuevos crean productos. Los productos ausentes del archivo se conservan. Nombres repetidos o filas inválidas impiden la importación completa. Si el inventario cambia desde la vista previa, vuelve a revisar el archivo antes de confirmar. Las diferencias quedan en movimientos como ajustes, sin crear ventas ni modificar cuentas anteriores.
 
 El análisis muestra ganancia estimada por unidad y producto, valor actual del inventario y ganancia potencial si se vende todo. Destaca los líderes por unidades (incluidos empates) y productos activos con stock cuya venta es de máximo una unidad por semana, proporcional al período. Es una señal para revisar compras considerando antigüedad y disponibilidad; para períodos de menos de 7 días se recomienda ampliar el rango. XLSX y CSV incluyen estos datos.
+
+## Apariencia Coral Stay
+
+Diseño adaptado del documento proporcionado por el usuario: coral, blanco y gris suave, Nunito Sans y DM Sans alojadas localmente, fotografía en el acceso y tarjetas redondeadas. Ver `DESIGN.md` para colores, fuentes, créditos y adaptación móvil.
