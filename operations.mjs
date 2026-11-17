@@ -9,6 +9,7 @@ const lock=db=>db.dialect==='postgres'?' FOR UPDATE':'';
 export async function audit(db,actor,action,entity,before=null,after=null){await db.prepare('INSERT INTO audit_log(actor_id,action,entity,before_json,after_json,created) VALUES(?,?,?,?,?,?)').run(actor,action,String(entity),JSON.stringify(before),JSON.stringify(after),now())}
 async function column(db,table,name,definition){const exists=db.dialect==='postgres'?await db.prepare('SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=? AND column_name=?').get(table,name):(await db.prepare(`PRAGMA table_info(${table})`).all()).some(c=>c.name===name);if(!exists)await db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`)}
 export async function ensureOperationsSchema(db){
+ if((await db.prepare('SELECT value FROM settings WHERE key=?').get('operations_schema_version'))?.value==='2')return;
  await column(db,'invoice_lines','unit_cost','INTEGER CHECK(unit_cost>=0)');
  await column(db,'invoice_lines','returned_quantity','INTEGER NOT NULL DEFAULT 0 CHECK(returned_quantity>=0 AND returned_quantity<=quantity)');
  await column(db,'invoices','original_total','INTEGER CHECK(original_total>=0)');
@@ -29,6 +30,9 @@ export async function ensureOperationsSchema(db){
  await db.exec(`INSERT INTO payments(invoice_id,actor_id,amount,method,note,created,legacy) SELECT i.id,i.user_id,i.total,'cash','Saldo pagado anterior: fecha de cobro no disponible',i.created,1 FROM invoices i WHERE i.status='Pagada' AND i.total>0 AND NOT EXISTS(SELECT 1 FROM payments p WHERE p.invoice_id=i.id)`);
  if(!await db.prepare('SELECT value FROM settings WHERE key=?').get('store_id'))await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('store_id',randomUUID());
  await db.exec('CREATE INDEX IF NOT EXISTS payments_date ON payments(created); CREATE INDEX IF NOT EXISTS audit_date ON audit_log(created); CREATE INDEX IF NOT EXISTS invoice_lines_product ON invoice_lines(product_id);');
+ await db.exec('CREATE INDEX IF NOT EXISTS payments_invoice ON payments(invoice_id); CREATE INDEX IF NOT EXISTS lines_invoice ON invoice_lines(invoice_id); CREATE INDEX IF NOT EXISTS invoices_user ON invoices(user_id,id);');
+ await db.prepare('DELETE FROM settings WHERE key=?').run('operations_schema_version');
+ await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('operations_schema_version','2');
 }
 export async function mutate(db,actor,key,action,body,fn){
  if(typeof key!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(key))fail('Identificador de operación inválido. Recarga el formulario.');

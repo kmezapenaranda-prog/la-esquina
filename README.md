@@ -146,3 +146,9 @@ Diseño adaptado del documento proporcionado por el usuario: coral, blanco y gri
 ## Gestión comercial
 
 En **Gestión** están compras/proveedores, caja diaria, gastos, pérdidas, respaldo cifrado y auditoría. Abonos y devoluciones se registran desde cada cuenta. Análisis incluye costos históricos y reposición para 14 días. Consulta [OPERATIONS.md](OPERATIONS.md) para reglas, migración de cuentas anteriores, restauración y límites.
+
+## Actualización automática
+
+Con la tienda abierta en una pestaña visible, se comprueban cambios cada 2 segundos. Un nuevo consumidor registrado desde otra sesión aparece automáticamente en la lista y en el selector del catálogo, conservando el QR y la persona seleccionada. Los cambios se posponen mientras se completa un formulario o hay un diálogo abierto. Al volver a la pestaña se comprueba de inmediato. Si se corta la conexión, se reintenta con espera progresiva hasta 30 segundos; el punto de estado cambia a naranja.
+
+Las comprobaciones sin cambios devuelven 304 y no recargan las cuentas. La carga de líneas y pagos se agrupa en consultas por conjunto, evitando dos consultas adicionales por cada cuenta. Las migraciones completadas se reconocen por versión para reducir trabajo al iniciar una función en Vercel.

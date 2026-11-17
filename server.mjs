@@ -50,7 +50,7 @@ async function handler(req,res){
  res.setHeader('Content-Security-Policy',"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
  if(route==='/api/config'&&req.method==='GET')return json(res,200,{demo:!process.env.VERCEL});
  if(route==='/api/health'&&req.method==='GET')return json(res,200,{app:'la-esquina',ok:true});
- if(!route.startsWith('/api/')){const name=route==='/operations-ui.js'?'operations-ui.js':route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/coral.css'?'coral.css':/^\/fonts\/(?:fonts\.css|coral-\d+\.ttf)$/.test(route)?route.slice(1):route==='/images/market.jpg'?'images/market.jpg':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/inventory-import-ui.js'?'inventory-import-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':name.endsWith('.ttf')?'font/ttf':name.endsWith('.jpg')?'image/jpeg':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
+ if(!route.startsWith('/api/')){const name=route==='/live-sync.js'?'live-sync.js':route==='/operations-ui.js'?'operations-ui.js':route==='/app.js'?'app.js':route==='/style.css'?'style.css':route==='/coral.css'?'coral.css':/^\/fonts\/(?:fonts\.css|coral-\d+\.ttf)$/.test(route)?route.slice(1):route==='/images/market.jpg'?'images/market.jpg':route==='/analytics-ui.js'?'analytics-ui.js':route==='/registration-ui.js'?'registration-ui.js':route==='/inventory-import-ui.js'?'inventory-import-ui.js':route==='/'?'index.html':null;if(!name)return json(res,404,{error:'No encontrado'});res.writeHead(200,{'Content-Type':name.endsWith('.js')?'text/javascript; charset=utf-8':name.endsWith('.css')?'text/css; charset=utf-8':name.endsWith('.ttf')?'font/ttf':name.endsWith('.jpg')?'image/jpeg':'text/html; charset=utf-8','Cache-Control':'no-cache'});return res.end(readFileSync(path.join(root,'public',name)))}
  let body={};if(!['GET','HEAD'].includes(req.method)){if(req.headers.origin&&req.headers.origin!==`${req.headers['x-forwarded-proto']||'http'}://${req.headers.host}`)fail('Origen no permitido.',403);if(req.body&&typeof req.body==='object')body=req.body;else{let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>(route.startsWith('/api/restore')?4000000:route==='/api/inventory-import/preview'?3000000:100000))fail('Solicitud demasiado grande.',413);chunks.push(c)}try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}')}catch{fail('Solicitud inválida.')}}}
  if(!body||typeof body!=='object'||Array.isArray(body))fail('Solicitud inválida.');
  const token=Object.fromEntries((req.headers.cookie||'').split(';').filter(x=>x.includes('=')).map(x=>x.trim().split('='))).session;
@@ -86,13 +86,21 @@ async function handler(req,res){
  if(!user)fail('Inicia sesión para continuar.',401);
  if(route==='/api/logout'&&req.method==='POST'){(await db.prepare('DELETE FROM sessions WHERE token=?').run(token));return json(res,200,{ok:true},{'Set-Cookie':cookie('')})}
  if(route==='/api/state'&&req.method==='GET'){
+ const revision='"state-'+user.id+'-'+(await db.prepare('SELECT COALESCE(MAX(id),0) revision FROM audit_log').get()).revision+'"';
+ if(req.headers['if-none-match']===revision){res.writeHead(304,{'ETag':revision,'Cache-Control':'private, no-cache'});return res.end()}
  const products=(await db.prepare('SELECT * FROM products WHERE active=1 ORDER BY id').all());
  for(const product of products){delete product.category_id;if(user.role!=='admin')delete product.unit_cost;}
  const invoices=(await db.prepare(`SELECT i.*,u.name consumer FROM invoices i JOIN users u ON i.user_id=u.id ${user.role==='admin'?'':'WHERE i.user_id=?'} ORDER BY i.id DESC`).all(...(user.role==='admin'?[]:[user.id])));
- for(const i of invoices){i.lines=await db.prepare('SELECT * FROM invoice_lines WHERE invoice_id=?').all(i.id);i.payments=await db.prepare('SELECT id,amount,method,note,created,legacy FROM payments WHERE invoice_id=? ORDER BY id').all(i.id);i.paid=i.payments.reduce((sum,p)=>sum+p.amount,0);i.balance=i.total-i.paid;if(user.role!=='admin')for(const l of i.lines)delete l.unit_cost;}
+ const scope=user.role==='admin'?'':' WHERE i.user_id=?',args=user.role==='admin'?[]:[user.id];
+ const lines=await db.prepare('SELECT l.* FROM invoice_lines l JOIN invoices i ON i.id=l.invoice_id'+scope+' ORDER BY l.id').all(...args);
+ const payments=await db.prepare('SELECT p.invoice_id,p.id,p.amount,p.method,p.note,p.created,p.legacy FROM payments p JOIN invoices i ON i.id=p.invoice_id'+scope+' ORDER BY p.id').all(...args);
+ const byInvoice=new Map(invoices.map(i=>[i.id,Object.assign(i,{lines:[],payments:[],paid:0})]));
+ for(const line of lines){if(user.role!=='admin')delete line.unit_cost;byInvoice.get(line.invoice_id)?.lines.push(line)}
+ for(const payment of payments){const i=byInvoice.get(payment.invoice_id);if(i){i.payments.push(payment);i.paid+=payment.amount}}
+ for(const i of invoices)i.balance=i.total-i.paid;
  const movements=(await db.prepare(`SELECT m.*,p.name product,p.icon,u.name actor,c.name consumer FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.actor_id LEFT JOIN users c ON c.id=m.user_id ${user.role==='admin'?'':'WHERE m.user_id=?'} ORDER BY m.id DESC LIMIT 200`).all(...(user.role==='admin'?[]:[user.id])));
  const users=user.role==='admin'?(await db.prepare('SELECT id,name,email,role FROM users ORDER BY id').all()):[userView(user)];
- return json(res,200,{user:userView(user),products,invoices,movements,users})}
+ return json(res,200,{user:userView(user),products,invoices,movements,users,revision},{ETag:revision})}
  if(route==='/api/checkout'&&req.method==='POST'){
  if(!Array.isArray(body.items)||!body.items.length||body.items.length>100)fail('Agrega productos a la cuenta.');
  const uid=user.role==='admin'?int(body.user_id,1):user.id;if(!(await db.prepare('SELECT id FROM users WHERE id=?').get(uid)))fail('Selecciona un consumidor.');

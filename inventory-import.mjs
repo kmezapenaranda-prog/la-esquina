@@ -11,11 +11,13 @@ const normalizeHeader=value=>String(value??'').normalize('NFD').replace(/[\u0300
 export const productKey=value=>String(value).normalize('NFC').trim().replace(/\s+/g,' ').toLocaleLowerCase('es-CO');
 
 export async function ensureInventoryImportSchema(db){
+ if((await db.prepare('SELECT value FROM settings WHERE key=?').get('inventory_schema_version'))?.value==='1')return;
  const exists=db.dialect==='postgres'
   ?await db.prepare("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='products' AND column_name='unit_cost'").get()
   :(await db.prepare('PRAGMA table_info(products)').all()).some(column=>column.name==='unit_cost');
  if(!exists)await db.exec('ALTER TABLE products ADD COLUMN unit_cost INTEGER CHECK(unit_cost>=0)');
  await db.exec(`CREATE TABLE IF NOT EXISTS inventory_imports(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),payload TEXT NOT NULL,created BIGINT NOT NULL,status TEXT NOT NULL CHECK(status IN ('pending','applied')),result TEXT)`);
+ await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('inventory_schema_version','1');
 }
 
 function integer(value,min,label){
