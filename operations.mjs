@@ -34,18 +34,29 @@ export async function ensureOperationsSchema(db){
  await db.prepare('DELETE FROM settings WHERE key=?').run('operations_schema_version');
  await db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run('operations_schema_version','2');
 }
+const inflightOperations=new Map();
 export async function mutate(db,actor,key,action,body,fn){
  if(typeof key!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(key))fail('Identificador de operación inválido. Recarga el formulario.');
  const fingerprint=createHash('sha256').update(JSON.stringify({action,body})).digest('hex');
- return db.transaction(async()=>{
-  const receipt=await db.prepare('SELECT * FROM operation_receipts WHERE id=?').get(key);
-  if(receipt){if(receipt.actor_id!==actor||receipt.fingerprint!==fingerprint)fail('Este identificador ya se usó para otra operación.',409);return JSON.parse(receipt.result)}
-  const result=await fn();
-  await db.prepare('INSERT INTO operation_receipts VALUES(?,?,?,?,?)').run(key,actor,fingerprint,JSON.stringify(result),now());return result;
- });
+ const replay=receipt=>{if(receipt.actor_id!==actor||receipt.fingerprint!==fingerprint)fail('Este identificador ya se usó para otra operación.',409);return JSON.parse(receipt.result)};
+ const running=inflightOperations.get(key);
+ if(running){if(running.actor!==actor||running.fingerprint!==fingerprint)fail('Este identificador ya se usó para otra operación.',409);return running.promise}
+ const operation={actor,fingerprint};
+ operation.promise=(async()=>{
+  const cached=await db.prepare('SELECT * FROM operation_receipts WHERE id=?').get(key);if(cached)return replay(cached);
+  return db.transaction(async()=>{
+   if(db.dialect==='postgres')await db.prepare('SELECT pg_advisory_xact_lock(21472434,hashtext(?))').get(key);
+   const receipt=await db.prepare('SELECT * FROM operation_receipts WHERE id=?').get(key);if(receipt)return replay(receipt);
+   const result=await fn();
+   await db.prepare('INSERT INTO operation_receipts VALUES(?,?,?,?,?)').run(key,actor,fingerprint,JSON.stringify(result),now());return result;
+  },{exclusive:action==='/api/restore/commit'});
+ })();
+ inflightOperations.set(key,operation);
+ try{return await operation.promise}finally{if(inflightOperations.get(key)===operation)inflightOperations.delete(key)}
 }
+
 const method=v=>{if(!['cash','transfer','card'].includes(v))fail('Selecciona efectivo, transferencia o tarjeta.');return v};
-export async function assertDayOpen(db){if((await db.prepare('SELECT status FROM day_closures WHERE day=?').get(today()))?.status==='Cerrado')fail('La caja de hoy está cerrada. Reábrela con un motivo antes de registrar dinero.',409)}
+export async function assertDayOpen(db){if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock_shared(21472435)');if((await db.prepare('SELECT status FROM day_closures WHERE day=?').get(today()))?.status==='Cerrado')fail('La caja de hoy está cerrada. Reábrela con un motivo antes de registrar dinero.',409)}
 export async function invoiceBalance(db,id){const i=await db.prepare('SELECT * FROM invoices WHERE id=?'+lock(db)).get(id);if(!i)fail('Cuenta no encontrada.',404);const paid=(await db.prepare('SELECT COALESCE(SUM(amount),0) value FROM payments WHERE invoice_id=?').get(id)).value;return {...i,paid,balance:i.total-paid}}
 async function updateStatus(db,id){await db.prepare("UPDATE invoices SET status=CASE WHEN total<=(SELECT COALESCE(SUM(amount),0) FROM payments WHERE invoice_id=?) THEN 'Pagada' ELSE 'Pendiente' END WHERE id=?").run(id,id)}
 export async function payInvoice(db,actor,id,body,full=false){await assertDayOpen(db);const i=await invoiceBalance(db,id),amount=full?i.balance:integer(body.amount,1);if(amount<=0||amount>i.balance)fail('El abono debe ser mayor que cero y no superar el saldo pendiente.');const m=method(body.method||'cash');const result=await db.prepare('INSERT INTO payments(invoice_id,actor_id,amount,method,note,created) VALUES(?,?,?,?,?,?)').run(id,actor,amount,m,text(body.note||'Pago recibido'),now());await updateStatus(db,id);await audit(db,actor,'Abono recibido',`cuenta:${id}`,{balance:i.balance},{amount,method:m,balance:i.balance-amount});return {id:Number(result.lastInsertRowid),balance:i.balance-amount}}
@@ -96,5 +107,5 @@ export async function dayReport(db,day){
  const closure=await db.prepare('SELECT * FROM day_closures WHERE day=?').get(day);
  return {day,methods,sales,credit,returns,losses,payments,expenses,purchases,closure};
 }
-export async function closeDay(db,actor,body){const day=text(body.day,10);if((await db.prepare('SELECT status FROM day_closures WHERE day=?').get(day))?.status==='Cerrado')fail('Este día ya está cerrado.',409);const report=await dayReport(db,day),opening=integer(body.opening),counted=integer(body.counted),expected=opening+report.methods.find(m=>m.method==='cash').net,note=text(body.note||'Cierre de caja');const values=[actor,opening,counted,expected,counted-expected,JSON.stringify({...report,closure:null}),'Cerrado',note,now()];if(report.closure)await db.prepare('UPDATE day_closures SET actor_id=?,opening=?,counted=?,expected=?,difference=?,report=?,status=?,note=?,created=? WHERE day=?').run(...values,day);else await db.prepare('INSERT INTO day_closures(actor_id,opening,counted,expected,difference,report,status,note,created,day) VALUES(?,?,?,?,?,?,?,?,?,?)').run(...values,day);await audit(db,actor,'Cierre de caja',day,report.closure,{opening,counted,expected,difference:counted-expected,note});return {expected,difference:counted-expected}}
+export async function closeDay(db,actor,body){if(db.dialect==='postgres')await db.exec('SELECT pg_advisory_xact_lock(21472435)');const day=text(body.day,10);if((await db.prepare('SELECT status FROM day_closures WHERE day=?').get(day))?.status==='Cerrado')fail('Este día ya está cerrado.',409);const report=await dayReport(db,day),opening=integer(body.opening),counted=integer(body.counted),expected=opening+report.methods.find(m=>m.method==='cash').net,note=text(body.note||'Cierre de caja');const values=[actor,opening,counted,expected,counted-expected,JSON.stringify({...report,closure:null}),'Cerrado',note,now()];if(report.closure)await db.prepare('UPDATE day_closures SET actor_id=?,opening=?,counted=?,expected=?,difference=?,report=?,status=?,note=?,created=? WHERE day=?').run(...values,day);else await db.prepare('INSERT INTO day_closures(actor_id,opening,counted,expected,difference,report,status,note,created,day) VALUES(?,?,?,?,?,?,?,?,?,?)').run(...values,day);await audit(db,actor,'Cierre de caja',day,report.closure,{opening,counted,expected,difference:counted-expected,note});return {expected,difference:counted-expected}}
 export async function operationsState(db){return {suppliers:await db.prepare('SELECT * FROM suppliers ORDER BY name,id').all(),purchases:await db.prepare('SELECT p.*,s.name supplier,COALESCE((SELECT SUM(amount) FROM purchase_payments pp WHERE pp.purchase_id=p.id),0) paid FROM purchases p JOIN suppliers s ON s.id=p.supplier_id ORDER BY p.id DESC LIMIT 200').all(),losses:await db.prepare('SELECT l.*,p.name product FROM losses l JOIN products p ON p.id=l.product_id ORDER BY l.id DESC LIMIT 100').all(),audit:(await db.prepare('SELECT a.*,u.name actor FROM audit_log a LEFT JOIN users u ON u.id=a.actor_id ORDER BY a.id DESC LIMIT 200').all()).map(a=>({...a,truncated:a.before_json.length+a.after_json.length>4000,...(a.before_json.length+a.after_json.length>4000?{before_json:'null',after_json:JSON.stringify({detalle:'Registro extenso. Abre el detalle completo.'})}:{})}))}}

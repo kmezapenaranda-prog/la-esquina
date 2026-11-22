@@ -131,5 +131,5 @@ export async function commitInventoryImport(db,token,actor){
   await db.prepare('UPDATE inventory_imports SET status=?,payload=?,result=? WHERE id=?').run('applied','{}',JSON.stringify(result),token);
   await audit(db,actor,'Inventario importado',filename,null,{...result,rows:rows.map(row=>({name:row.name,before:row.expected,stock:row.stock,price:row.price,unit_cost:row.unit_cost}))});
   return result;
- });
+ },{exclusive:true});
 }

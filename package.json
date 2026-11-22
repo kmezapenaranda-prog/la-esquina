@@ -1,12 +1,14 @@
 {
   "name": "la-esquina",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
-    "dev": "node server.mjs"
+    "dev": "node server.mjs",
+    "test:load": "node scripts/load-test.mjs",
+    "test:postgres": "node scripts/test-postgres.mjs"
   },
   "engines": {
     "node": ">=22.13"
