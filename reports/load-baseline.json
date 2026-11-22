@@ -1,0 +1,216 @@
+{
+  "label": "baseline",
+  "date": "2026-11-22T15:53:17.969Z",
+  "environment": {
+    "database": "PostgreSQL 17 isolated loopback",
+    "dbDelayMs": 0,
+    "users": 100,
+    "historicalInvoices": 2000,
+    "products": 108,
+    "node": "v24.22.1",
+    "serverProcesses": 1,
+    "maxObservedConnections": 4
+  },
+  "metrics": [
+    {
+      "name": "100 simultaneous full state reads",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 518,
+      "rps": 193.1,
+      "p50": 445,
+      "p95": 483.9,
+      "p99": 497.6,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "100 simultaneous conditional polls",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 175,
+      "rps": 571.6,
+      "p50": 152.7,
+      "p95": 158.8,
+      "p99": 163.6,
+      "unexpected": 0,
+      "statuses": {
+        "304": 100
+      }
+    },
+    {
+      "name": "100 active users polling every 2s for 20s",
+      "requests": 1000,
+      "concurrency": 100,
+      "durationMs": 18090,
+      "rps": 55.3,
+      "p50": 26.6,
+      "p95": 74.4,
+      "p99": 103.1,
+      "unexpected": 0,
+      "statuses": {
+        "304": 1000
+      }
+    },
+    {
+      "name": "100 simultaneous independent checkouts",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 409,
+      "rps": 244.5,
+      "p50": 241.8,
+      "p95": 387.2,
+      "p99": 398.5,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous independent payments",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 466,
+      "rps": 214.4,
+      "p50": 276,
+      "p95": 442,
+      "p99": 455.9,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 contenders for one unit",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 177,
+      "rps": 564.6,
+      "p50": 122.1,
+      "p95": 160.6,
+      "p99": 165.1,
+      "unexpected": 0,
+      "statuses": {
+        "201": 1,
+        "400": 99
+      }
+    },
+    {
+      "name": "100 identical checkout replays",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 140,
+      "rps": 713.7,
+      "p50": 97.8,
+      "p95": 128.5,
+      "p99": 131.2,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous valid registrations",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 3768,
+      "rps": 26.5,
+      "p50": 1926.3,
+      "p95": 3584,
+      "p99": 3760.6,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous logins",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 3330,
+      "rps": 30,
+      "p50": 3301.4,
+      "p95": 3326,
+      "p99": 3327.1,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "100 authorization and validation probes",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 62,
+      "rps": 1616.1,
+      "p50": 29,
+      "p95": 55.1,
+      "p99": 56.3,
+      "unexpected": 0,
+      "statuses": {
+        "400": 25,
+        "401": 25,
+        "403": 50
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "full states isolated",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "polling has no unexpected errors",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 independent sales commit",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 payments commit once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "one unit sold once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "idempotency survives 100 replays",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 registrations succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 logins succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "unauthorized/malformed requests rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "financial and stock invariants",
+      "ok": true,
+      "details": {
+        "negative_stock": "0",
+        "bad_totals": "0",
+        "overpaid": "0"
+      }
+    }
+  ],
+  "serverErrors": []
+}

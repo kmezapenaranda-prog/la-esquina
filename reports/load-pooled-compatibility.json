@@ -1,0 +1,457 @@
+{
+  "label": "pooled-compatibility",
+  "date": "2026-11-22T16:13:32.016Z",
+  "environment": {
+    "database": "PostgreSQL 17 isolated loopback",
+    "dbDelayMs": 25,
+    "users": 100,
+    "historicalInvoices": 2000,
+    "products": 108,
+    "node": "v24.22.1",
+    "serverProcesses": 2,
+    "observedConnectionsAtEnd": 17,
+    "observedPeakRssMiBPerWorker": [
+      154,
+      170
+    ],
+    "appVersion": "1.5.0"
+  },
+  "metrics": [
+    {
+      "name": "100 simultaneous full state reads",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 688,
+      "rps": 145.3,
+      "p50": 494.8,
+      "p95": 658.1,
+      "p99": 670.4,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "100 simultaneous conditional polls",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 222,
+      "rps": 450.5,
+      "p50": 125,
+      "p95": 204.1,
+      "p99": 204.7,
+      "unexpected": 0,
+      "statuses": {
+        "304": 100
+      }
+    },
+    {
+      "name": "100 active users polling every 2s for 5s",
+      "requests": 300,
+      "concurrency": 100,
+      "durationMs": 5000,
+      "rps": 60,
+      "p50": 105.5,
+      "p95": 175.6,
+      "p99": 195.1,
+      "unexpected": 0,
+      "statuses": {
+        "304": 300
+      }
+    },
+    {
+      "name": "100 simultaneous independent checkouts",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 2820,
+      "rps": 35.5,
+      "p50": 1718.3,
+      "p95": 2772.8,
+      "p99": 2775.2,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous independent payments",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 5146,
+      "rps": 19.4,
+      "p50": 3087.2,
+      "p95": 4802.3,
+      "p99": 5134.9,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 contenders for one unit",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 1549,
+      "rps": 64.5,
+      "p50": 1149.6,
+      "p95": 1530.6,
+      "p99": 1534.7,
+      "unexpected": 0,
+      "statuses": {
+        "201": 1,
+        "400": 99
+      }
+    },
+    {
+      "name": "100 competing payments for one remaining balance",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 3649,
+      "rps": 27.4,
+      "p50": 2313.2,
+      "p95": 3504.1,
+      "p99": 3610,
+      "unexpected": 0,
+      "statuses": {
+        "201": 1,
+        "400": 99
+      }
+    },
+    {
+      "name": "100 identical checkout replays",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 999,
+      "rps": 100.1,
+      "p50": 989.3,
+      "p95": 990.8,
+      "p99": 991.2,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous valid registrations",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 2650,
+      "rps": 37.7,
+      "p50": 1643.4,
+      "p95": 2547.3,
+      "p99": 2591.3,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous logins",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 2240,
+      "rps": 44.6,
+      "p50": 1284.2,
+      "p95": 2177.9,
+      "p99": 2210.4,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "server responsiveness during login burst",
+      "requests": 20,
+      "p95": 30.8,
+      "unexpected": 0
+    },
+    {
+      "name": "100 authorization and validation probes",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 354,
+      "rps": 282.2,
+      "p50": 116.2,
+      "p95": 302.3,
+      "p99": 350,
+      "unexpected": 0,
+      "statuses": {
+        "400": 25,
+        "401": 25,
+        "403": 50
+      }
+    },
+    {
+      "name": "100 concurrent wrong passwords for one account",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 428,
+      "rps": 233.4,
+      "p50": 22,
+      "p95": 364.7,
+      "p99": 426.8,
+      "unexpected": 0,
+      "statuses": {
+        "401": 20,
+        "429": 80
+      }
+    },
+    {
+      "name": "100 concurrent invalid registration invitations",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 205,
+      "rps": 488,
+      "p50": 118,
+      "p95": 167.1,
+      "p99": 186.3,
+      "unexpected": 0,
+      "statuses": {
+        "400": 40,
+        "429": 60
+      }
+    },
+    {
+      "name": "300 concurrent invalid logins above target capacity",
+      "requests": 300,
+      "concurrency": 300,
+      "durationMs": 6038,
+      "rps": 49.7,
+      "p50": 3179.4,
+      "p95": 5758.9,
+      "p99": 5968.5,
+      "unexpected": 0,
+      "statuses": {
+        "401": 298,
+        "429": 2
+      }
+    },
+    {
+      "name": "admin full history with 2000 invoices",
+      "requests": 1,
+      "concurrency": 1,
+      "durationMs": 136,
+      "rps": 7.3,
+      "p50": 135.7,
+      "p95": 135.7,
+      "p99": 135.7,
+      "unexpected": 0,
+      "statuses": {
+        "200": 1
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "full states isolated",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "polling has no unexpected errors",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 independent sales commit",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 payments commit once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "one unit sold once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "remaining balance cannot be overpaid",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "idempotency survives 100 replays",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 registrations succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 logins succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "unauthorized/malformed requests rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "parallel password attacks cannot bypass limits",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "parallel invitation attacks cannot bypass limits",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "overload rejected safely without 500 errors",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "server recovers after overload",
+      "ok": true,
+      "details": 0.9210869999951683
+    },
+    {
+      "name": "malformed JSON rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "oversized body rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "cross-origin write rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "admin payload below Vercel response limit",
+      "ok": true,
+      "details": 758602
+    },
+    {
+      "name": "financial and stock invariants",
+      "ok": true,
+      "details": {
+        "negative_stock": "0",
+        "stock_mismatch": "0",
+        "bad_totals": "0",
+        "overpaid": "0"
+      }
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous full state reads",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous conditional polls",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 active users polling every 2s for 5s",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous independent checkouts",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous independent payments",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 contenders for one unit",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 competing payments for one remaining balance",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 identical checkout replays",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous valid registrations",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 simultaneous logins",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 authorization and validation probes",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 concurrent wrong passwords for one account",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 100 concurrent invalid registration invitations",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: 300 concurrent invalid logins above target capacity",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO no unexpected responses: admin full history with 2000 invoices",
+      "ok": true,
+      "details": 0
+    },
+    {
+      "name": "SLO full-state p95 < 2s",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO conditional-poll p95 < 1s",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO burst p95 < 10s: 100 simultaneous independent checkouts",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO burst p95 < 10s: 100 simultaneous independent payments",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO burst p95 < 10s: 100 simultaneous valid registrations",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO burst p95 < 10s: 100 simultaneous logins",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "SLO health p95 < 500ms during logins",
+      "ok": true,
+      "details": ""
+    }
+  ],
+  "serverErrors": []
+}

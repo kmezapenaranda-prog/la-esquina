@@ -151,4 +151,8 @@ En **Gestión** están compras/proveedores, caja diaria, gastos, pérdidas, resp
 
 Con la tienda abierta en una pestaña visible, se comprueban cambios cada 2 segundos. Un nuevo consumidor registrado desde otra sesión aparece automáticamente en la lista y en el selector del catálogo, conservando el QR y la persona seleccionada. Los cambios se posponen mientras se completa un formulario o hay un diálogo abierto. Al volver a la pestaña se comprueba de inmediato. Si se corta la conexión, se reintenta con espera progresiva hasta 30 segundos; el punto de estado cambia a naranja.
 
-Las comprobaciones sin cambios devuelven 304 y no recargan las cuentas. La carga de líneas y pagos se agrupa en consultas por conjunto, evitando dos consultas adicionales por cada cuenta. Las migraciones completadas se reconocen por versión para reducir trabajo al iniciar una función en Vercel.
+Las comprobaciones sin cambios devuelven 304 y no recargan las cuentas. En PostgreSQL la carga del estado se agrupa en una sola sentencia; el sondeo sin cambios consulta sesión y revisión juntos. Las migraciones completadas se reconocen por versión para reducir trabajo al iniciar una función en Vercel.
+
+## Capacidad verificada
+
+La versión 1.5.0 se probó con 100 sesiones virtuales simultáneas y dos instancias compartiendo PostgreSQL. Incluye pruebas de carga, sobrecarga, duplicados, inventario, pagos y ataques a los límites de acceso. Consulta [reports/CAPACITY.md](reports/CAPACITY.md) para resultados, configuración, condiciones del entorno y límites de lo comprobado. Comandos: `npm test`, `npm run test:postgres` y `npm run test:load` (las dos últimas requieren PostgreSQL local de pruebas).

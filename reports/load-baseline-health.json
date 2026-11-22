@@ -1,0 +1,266 @@
+{
+  "label": "baseline-health",
+  "date": "2026-11-22T16:05:18.868Z",
+  "environment": {
+    "database": "PostgreSQL 17 isolated loopback",
+    "dbDelayMs": 0,
+    "users": 100,
+    "historicalInvoices": 2000,
+    "products": 108,
+    "node": "v24.22.1",
+    "serverProcesses": 1,
+    "observedConnectionsAtEnd": 4,
+    "observedPeakRssMiBPerWorker": [
+      131
+    ],
+    "appVersion": "1.4.1"
+  },
+  "metrics": [
+    {
+      "name": "100 simultaneous full state reads",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 508,
+      "rps": 196.9,
+      "p50": 413.5,
+      "p95": 486.7,
+      "p99": 489.9,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "100 simultaneous conditional polls",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 100,
+      "rps": 1003.3,
+      "p50": 74.3,
+      "p95": 79.5,
+      "p99": 80,
+      "unexpected": 0,
+      "statuses": {
+        "304": 100
+      }
+    },
+    {
+      "name": "100 active users polling every 2s for 2s",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 71,
+      "rps": 1413.4,
+      "p50": 53.9,
+      "p95": 61.4,
+      "p99": 62.7,
+      "unexpected": 0,
+      "statuses": {
+        "304": 100
+      }
+    },
+    {
+      "name": "100 simultaneous independent checkouts",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 536,
+      "rps": 186.5,
+      "p50": 323.2,
+      "p95": 496,
+      "p99": 512.4,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous independent payments",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 521,
+      "rps": 191.9,
+      "p50": 290.8,
+      "p95": 485.5,
+      "p99": 502.9,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 contenders for one unit",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 192,
+      "rps": 522.1,
+      "p50": 135.2,
+      "p95": 170.4,
+      "p99": 173.4,
+      "unexpected": 0,
+      "statuses": {
+        "201": 1,
+        "400": 99
+      }
+    },
+    {
+      "name": "100 competing payments for one remaining balance",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 223,
+      "rps": 448,
+      "p50": 119.6,
+      "p95": 210.5,
+      "p99": 215.6,
+      "unexpected": 0,
+      "statuses": {
+        "201": 1,
+        "400": 99
+      }
+    },
+    {
+      "name": "100 identical checkout replays",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 115,
+      "rps": 869.6,
+      "p50": 78.8,
+      "p95": 106.3,
+      "p99": 109,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous valid registrations",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 3681,
+      "rps": 27.2,
+      "p50": 1894.5,
+      "p95": 3485,
+      "p99": 3640.4,
+      "unexpected": 0,
+      "statuses": {
+        "201": 100
+      }
+    },
+    {
+      "name": "100 simultaneous logins",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 3348,
+      "rps": 29.9,
+      "p50": 3319,
+      "p95": 3345,
+      "p99": 3345.3,
+      "unexpected": 0,
+      "statuses": {
+        "200": 100
+      }
+    },
+    {
+      "name": "server responsiveness during login burst",
+      "requests": 13,
+      "p95": 215.6,
+      "unexpected": 0
+    },
+    {
+      "name": "100 authorization and validation probes",
+      "requests": 100,
+      "concurrency": 100,
+      "durationMs": 81,
+      "rps": 1228.6,
+      "p50": 34,
+      "p95": 69.3,
+      "p99": 70.3,
+      "unexpected": 0,
+      "statuses": {
+        "400": 25,
+        "401": 25,
+        "403": 50
+      }
+    },
+    {
+      "name": "admin full history with 2000 invoices",
+      "requests": 1,
+      "concurrency": 1,
+      "durationMs": 44,
+      "rps": 22.5,
+      "p50": 43.9,
+      "p95": 43.9,
+      "p99": 43.9,
+      "unexpected": 0,
+      "statuses": {
+        "200": 1
+      }
+    }
+  ],
+  "checks": [
+    {
+      "name": "full states isolated",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "polling has no unexpected errors",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 independent sales commit",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 payments commit once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "one unit sold once",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "remaining balance cannot be overpaid",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "idempotency survives 100 replays",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 registrations succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "100 logins succeed",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "unauthorized/malformed requests rejected",
+      "ok": true,
+      "details": ""
+    },
+    {
+      "name": "admin payload below Vercel response limit",
+      "ok": true,
+      "details": 758593
+    },
+    {
+      "name": "financial and stock invariants",
+      "ok": true,
+      "details": {
+        "negative_stock": "0",
+        "stock_mismatch": "0",
+        "bad_totals": "0",
+        "overpaid": "0"
+      }
+    }
+  ],
+  "serverErrors": []
+}

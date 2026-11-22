@@ -11,7 +11,7 @@ export async function openDatabase({ directory, url = process.env.DATABASE_URL }
     types.setTypeParser(1700, Number);
     const configured=Number(process.env.DB_POOL_MAX||8);
     if(!Number.isInteger(configured)||configured<1||configured>20)throw Error('DB_POOL_MAX debe estar entre 1 y 20.');
-    const pool = new Pool({ connectionString: url, max:configured, connectionTimeoutMillis:10000, idleTimeoutMillis:30000, statement_timeout:15000, idle_in_transaction_session_timeout:20000 });
+    const pool = new Pool({ connectionString: url, max:configured, connectionTimeoutMillis:10000, idleTimeoutMillis:30000 });
     pool.on('error',error=>console.error('PostgreSQL idle connection:',error.code||error.name));
     const target=new URL(url),testDelay=['localhost','127.0.0.1','[::1]'].includes(target.hostname)&&/^\/loadtest_/.test(target.pathname)?Math.min(100,Math.max(0,Number(process.env.LOAD_TEST_DB_DELAY_MS)||0)):0;
     const execute=async(client,sql,args=[])=>{if(testDelay)await new Promise(resolve=>setTimeout(resolve,testDelay));return client.query(sql,args)};
@@ -41,7 +41,7 @@ export async function openDatabase({ directory, url = process.env.DATABASE_URL }
       async transaction(fn,{exclusive=false}={}) {
         const client = await acquire();
         try {
-          await execute(client,'BEGIN');
+          await execute(client,"BEGIN; SET LOCAL statement_timeout='15s'; SET LOCAL idle_in_transaction_session_timeout='20s'");
           await execute(client,exclusive?'SELECT pg_advisory_xact_lock(21472433)':'SELECT pg_advisory_xact_lock_shared(21472433)');
           const transaction={client,dirty:false};
           const result = await context.run(transaction, fn);
